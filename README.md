@@ -1,216 +1,99 @@
-# n8n 中文學習教程
+# n8n Agent Automation Course
 
-> 教材更新日期：2026-09-10。教材依七週主題排列；每週都包含講義、`課堂練習`、`案例範本` 與官方範本延伸。從 [第一週](01_第1週-n8n啟航與AI-Agent) 開始。
+這是一套七週、42 小時的實作型 n8n 自動化課程。教材以「先讓流程跑通，再理解資料、憑證、錯誤與部署」為主線；每週均有上午與下午的可匯入 JSON 練習、API／憑證申請指南與官方範本延伸。
 
-> **前言**：這份教程專門為初學者、非工程師背景的朋友準備的系統化學習教程。如果你已經有一定基礎，或者只是想查詢某個節點的操作，不用跟著這套流程，跳著閱讀即可。
->
-> 我認為最可靠的學習方法是：
-> 1. 花 1-2 天熟悉 n8n 介面和基本操作
-> 2. 跟著 YouTube 影片教程模仿 2-3 個工作流程 (Workflow)
-> 3. 開始自己的創作，帶著問題和需求去探索
->
-> 記得站在前人的肩膀上才能走更高，推薦這個倉庫：[awesome-n8n-templates](https://github.com/enescingoz/awesome-n8n-templates) 參考改造或創作屬於你自己的工作流程。
+課程表見 [2026 n8n 課程表](2026_n8n_課程表.md)。
 
->  **學習重點**：不要追求一步到位。先讓流程「跑通」，再逐步優化。
+## 開始前
 
-> 一個完整的 n8n 工作流程自動化學習教程，幫你從零開始掌握 n8n，構建智能自動化解決方案
+1. 下載教材：
 
-##  學習前必讀
+   ```bash
+   git clone https://github.com/roapple10/n8n_agent_course.git
+   cd n8n_agent_course
+   ```
 
-###  前置條件
-- **時間投入**：每天 1-2 小時，堅持 4 週
-- **硬體要求**：能運行 Docker 的電腦（Windows/Mac/Linux）或雲端伺服器 (VPS)
-- **網路要求**：能訪問 GitHub、Docker Hub
-- **API 準備**：建議準備 OpenAI 或 Google Gemini 的 API Key 以進行 AI 相關實作
+2. 從 [第一週](01_第1週-n8n啟航與AI-Agent/) 開始，依序完成 Docker、n8n 與 GitHub／Git 的準備。
+3. 每週先閱讀該週的 `API與憑證申請指南.md`，再匯入 `課堂練習/` 的 JSON。
+4. 所有 API Key、OAuth Client Secret、credentials 匯出與 `.env` 均不得提交到自己的作業 repo。
 
-###  適合人群
--  **完全初學者**：想學自動化但不知道從哪開始
--  **職場人士**：想提升工作效率，減少重複勞動
--  **AI 愛好者**：想讓 AI 真正幫你「動手幹活」，而不只是聊天
--  **技術探索者**：對低程式碼 (Low-Code) 和自動化感興趣
+## 課程地圖
 
-###  不適合人群
--  **追求完美**：希望系統 100% 穩定，零錯誤（n8n 很強大，但錯誤處理需要經驗）
--  **急功近利**：想 1 天就掌握所有技能
--  **純理論派**：只喜歡看書，不喜歡動手實踐
+| 週次 | 主題 | 上午練習 | 下午練習 |
+|---|---|---|---|
+| 01 | n8n 啟航、AI Agent、Docker 與 RAG 概念 | 資料流與表達式 | Agent 架構與部署檢查 |
+| 02 | Gmail、JSON 與 OpenAI | JSON、Gmail、OpenAI 準備 | Gmail AI 自動標記 |
+| 03 | Outlook、HTTP 與控制節點 | Outlook、HTTP、If／Switch／Loop | AI 草稿與市場新聞 |
+| 04 | Google Drive 與 Google Sheets | Drive 摘要寫入 Sheets | Sheets 自然語言對話 |
+| 05 | Telegram 與潛在客戶分析 | Telegram 與潛客評分 | 行程對話與 Sheets 客戶分析 |
+| 06 | 表單、PDF、RAG 與引用來源 | 表單回饋與 PDF 問答 | PDF RAG 與引用來源 |
+| 07 | 維運、錯誤處理與期末專題 | 錯誤處理與部署檢查 | 期末專題起始骨架 |
 
-##  這個教程能幫你做什麼？
+## 資料夾結構
 
-這是一個**系統化的 n8n 學習教程專案**，專門為初學者設計：
-
--  **從零開始**：不需要程式設計基礎，用白話文教你 n8n
--  **系統學習**：按照 4 週學習路線，一步步掌握核心技能
--  **實戰應用**：包含真實專案案例，邊學邊做
--  **AI 增強**：學會使用 **AI Agent Node** 讓 AI 真正為你「動手幹活」
--  **實用技能**：掌握未來工作的核心能力
-
-> **核心理念**：讓 AI 擁有「手腳」，而不只是只會聊天。n8n 就是給 AI 裝上行動能力的「現代魔法」。
-
-##  專案結構（實際內容）
-
-> 目前採七週結構；以下舊版結構圖僅保留作為原始教材對照。請以根目錄的 `01_第1週` 至 `07_第7週` 資料夾為準。
-
-```
+```text
 n8n/
-│
-├── 01_教程導覽/                    #  學習指南
-│   └── 00-學習路線圖.md           # 4週學習計畫（詳細版）
-│
-├── 02_核心概念/                    #  理論基礎
-│   ├── 00-什麼是n8n.md           # n8n 核心概念詳解
-│   └── 01-AI時代的自動化思維.md   # AI 與自動化結合
-│
-├── 03_環境部署/                    #  環境搭建
-│   └── 本地安裝指南.md            # 本地環境安裝 (Docker/Docker Compose)
-│
-├── 04_節點詳解/                    #  節點功能詳解
-│   ├── 00-從需求找節點.md         # 節點選擇指南
-│   ├── 01-常用邏輯節點介紹.md     # If/Switch/Merge/Loop
-│   ├── 02-AI節點詳細介紹.md       # AI Agent/LangChain Code
-│   ├── 03-半開放式節點詳細介紹.md # Code/HTTP Request
-│   ├── 04-n8n內建變數與方法.md    # 表達式速查
-│   ├── 05-n8n中如何使用MCP.md     # MCP 協議使用
-│   └── images/                   # 節點配置截圖
-│
-├── 05_調試與排錯/                  #  問題診斷
-│   └── 00-單步調試與測試案例.md   # 調試技巧
-│
-├── 06_實戰案例/                    #  真實專案
-│   ├── 01-檢查網站sitemap狀態/    # 網站監控工作流程（學習HTTP請求、條件判斷）
-│   ├── 02-爬蟲爬取網站數據/       # 數據抓取工作流程（學習數據處理、AI清洗）
-│   └── 03-使用Google Veo3生成AI影片/ # AI影片生成（學習輪詢、文件處理、第三方集成）
-│
-├── 07_一些小技巧/                  #  進階技巧
-│   └── 進階技巧.md                # 實戰經驗總結
-│
-└── 08_資源工具箱/                  #  實用資源
-    └── 推薦閱讀清單.md            # 學習資源彙總
+├── 01_第1週-n8n啟航與AI-Agent/
+│   ├── Docker與n8n課程教學.md
+│   ├── GitHub與Git課程教學.md
+│   ├── RAG-Agent基礎概念與練習.md
+│   ├── docker-compose.yml
+│   ├── API與憑證申請指南.md
+│   └── 課堂練習/
+├── 02_第2週-Gmail與OpenAI/
+├── 03_第3週-Outlook與API整合/
+├── 04_第4週-Google-Drive與Sheets/
+├── 05_第5週-Telegram與潛客分析/
+├── 06_第6週-表單PDF與RAG/
+├── 07_第7週-維運與期末專題/
+├── n8n AI Automation Workshop/
+│   ├── Session_1/、Session_2/       # 投影片與講義
+│   ├── n8n-skills/                  # 節點索引、模式與範本參考
+│   └── n8n_template/                # 額外工作流與測試資料
+└── 2026_n8n_課程表.md
 ```
 
-> **說明**：這是實際的專案結構，每個文件夾都有對應的詳細教程和實戰案例。
+每週資料夾的慣例如下：
 
-##  為什麼選擇 n8n？
+- `課堂練習/`：按課表安排的 JSON；先匯入，再逐節點執行與查看 Input／Output。
+- `API與憑證申請指南.md`：該週所需服務的端到端申請與 n8n credential 設定步驟。
+- `官方範本延伸練習.md`：對應主題的 n8n Workflow Library 範本與改造建議。
+- `案例範本/`：可作為課後延伸的真實情境案例；匯入前先檢查帳號權限、寫入動作與資料範圍。
 
-###  強大的集成能力
-- **1000+ 第三方服務**：Google Sheets, Notion, Gmail, Slack, Telegram 等
-- **Google Gemini 支持**：原生支持 Google Gemini 模型，可進行圖片分析、文字生成等
-- **半封裝模式**：既可以用現成節點，也能插入 JavaScript/Python 程式碼
-- **BYOK 支持**：用自己的 OpenAI/Anthropic/Google API 金鑰，靈活控制成本
+## 第一週的建議順序
 
-###  AI 友好設計 (2025 更新)
-- **AI Agent Node**：最新的 AI Agent 節點，作為「大腦」自動規劃和執行任務，支援記憶與工具調用。
-- **LangChain Code Node**：為開發者準備的節點，直接編寫 LangChain 程式碼，實現高度客製化的 Agent。
-- **可視化 AI 編排**：不用寫程式就能讓 AI 參與決策和處理。
+1. 閱讀 [Docker 與 n8n 課程教學](01_第1週-n8n啟航與AI-Agent/Docker與n8n課程教學.md)，以 `docker compose up -d` 啟動本機 n8n。
+2. 建立本機 Owner 帳號，開啟 `http://localhost:5678`。
+3. 匯入並執行：
+   - `課堂練習/上午-n8n啟航與資料流.json`
+   - `課堂練習/下午-AI-Agent與部署檢查.json`
+4. 依 [RAG Agent 基礎概念與練習](01_第1週-n8n啟航與AI-Agent/RAG-Agent基礎概念與練習.md) 匯入官方範本衍生的 RAG 加練，先辨識資料入庫與檢索回答兩條資料流。
+5. 閱讀 [GitHub 與 Git 課程教學](01_第1週-n8n啟航與AI-Agent/GitHub與Git課程教學.md)，建立自己的私人作業 repo 並提交作業。
 
-###  適合個人和小團隊
-- **私有化部署**：數據完全由你掌控，更安全 (Self-hosted)
-- **「寄生系統」**：為現有系統「打補丁」或「加外掛」
-- **快速迭代**：先讓流程跑通，再逐步優化
+第一週的 RAG 加練不必先設定 API Key；完成第二週的 OpenAI credential 後，再執行文件上傳與聊天問答。
 
-##  學習資源
+## 每週作業交付
 
-###  官方資源（參考）
-- [n8n 官方文檔](https://docs.n8n.io/) - 內容詳盡，適合查閱特定功能
-- [n8n 社區論壇](https://community.n8n.io/) - 遇到問題可以搜尋或求助
-- [n8n 工作流程案例庫](https://n8n.io/workflows/) - 官方及社區貢獻的範例
+每週交付下列四項：
 
-###  影片教程（推薦）
-- [n8n 官方 YouTube](https://www.youtube.com/c/n8n-io) - 官方教學與新功能展示
-- YouTube 上搜尋 "n8n tutorial" 有許多優質的英文教學
+1. 匯出的 workflow JSON，不得包含 credentials。
+2. 一次成功與一次失敗／修正後的 execution 截圖。
+3. 測試輸入與預期輸出。
+4. 三句反思：輸入是什麼、資料如何處理、輸出如何驗收。
 
-###  實用工具（必收藏）
-- [awesome-n8n-templates](https://github.com/enescingoz/awesome-n8n-templates) - **必看**，大量現成工作流程範本
-- [JSON Formatter](https://jsonformatter.org/) - 處理 API 回傳數據時很有用
+任何寄信、寫入資料表、發佈訊息或刪除資料的節點，都必須先以測試帳號、測試資料或停用狀態驗證。
 
-###  與其他工具對比
-| 工具 | 優勢 | 劣勢 | 適合場景 |
-|------|------|------|----------|
-| **n8n** | 私有部署、AI 功能強大、1000+ 集成、靈活 | 學習曲線較陡峭 (需懂一點邏輯) | 個人/小團隊、需要 AI 集成、重視數據隱私 |
-| **Zapier** | 簡單易用、極其穩定 | 價格昂貴、邏輯處理能力較弱 | 輕量級自動化、預算充足 |
-| **Make (Integromat)** | 可視化強、邏輯處理不錯 | 操作稍繁瑣、免費額度少 | 中型複雜度的自動化 |
-| **Dify.ai** | AI Agent 專精、RAG 功能強 | 傳統自動化集成較少 | 專注 AI 應用開發 (LLM App) |
+## 教材與範本來源
 
-##  獲取幫助
+- [n8n 官方文件](https://docs.n8n.io/)
+- [n8n Workflow Library](https://n8n.io/workflows/)
+- [n8n Community](https://community.n8n.io/)
+- [n8n AI Automation Workshop](https://github.com/roapple10/n8n-ai-automation-workshop)
 
-###  遇到問題怎麼辦？
-1. **先看本教程**：`05_調試與排錯/00-單步調試與測試案例.md`
-2. **問 AI**：截圖發錯誤訊息，讓 ChatGPT/Gemini 幫你分析
-3. **社區求助**：[n8n Community](https://community.n8n.io/)
-4. **GitHub Issues**：[n8n Issues](https://github.com/n8n-io/n8n/issues)
+官方範本與社群範本都可能需要更新節點版本、憑證與資料欄位。匯入後請先閱讀節點設定，勿直接啟用。
 
-###  推薦工具
-- **沉浸式翻譯**：瀏覽英文文檔時自動翻譯
-- **ChatGPT / Gemini / Claude**：結對編程助手，幫你寫 Function 節點的程式碼、分析報錯
-- **Postman**：調試 API 接口，然後 Import cURL 到 n8n
+## 安全提醒
 
-##  學完後你能做什麼？
-
-完成本教程後，你將能夠：
-
-###  核心技能
--  **獨立設計工作流程**：從需求分析到流程搭建
--  **集成第三方服務**：Google Sheets, Notion, Email, Telegram 等
--  **讓 AI 真正幹活**：調用 GPT/Gemini 進行智能決策和處理
--  **解決實際問題**：自動化你的重複性工作
-
-###  進階能力
--  **調試和優化**：單步調試、錯誤處理、性能優化
--  **半開放式節點**：用 Code/HTTP Request 補齊能力
--  **AI Agent 開發**：構建能使用工具的智能體
--  **實戰專案**：完成 3 個真實專案案例
-
-###  實際價值
--  **提升效率**：讓重複工作自動化，節省時間
--  **AI 協作**：從 AI 使用者變成 AI 指揮官
--  **技能升級**：掌握未來工作的核心能力
--  **個人品牌**：擁有自己的「移動城堡」
-
-##  學習心法（必讀）
-
-###  核心原則
-1. **不要追求「完全理解」**  
-   → 很多配置（如 OAuth）你可能不懂原理，但只要 "work" 了就先用著。
-
-2. **善用搜索引擎和 AI**  
-   → 報錯訊息 → 截圖 → 丟給 ChatGPT：「這個 n8n 錯誤怎麼解決？」
-
-3. **從小處著手，快速迭代**  
-   → 先做「最小可用流程」，再逐步加功能。
-
-4. **把 n8n 當「寄生系統」**  
-   → 不改變現有業務，只在上面加一層自動化「外掛」。
-
-5. **接受不完美**  
-   → 低程式碼的穩定性不如工程系統，但勝在**靈活、快速、自由**。
-
-###  學習建議
-- **目標明確**：知道要學什麼，學到什麼程度
-- **循序漸進**：按照教程順序學習
-- **動手實踐**：理論結合實踐，學以致用
-- **社區交流**：與他人分享，共同進步
-
-##  結語：打造你的「移動城堡」
-
-> "n8n 生產出來的流程更像是手工藝製品，或者是霍爾的移動城堡。"  
-> —— 它可能歪歪扭扭，但它屬於你，它能動，它能幫你幹活。
-
-當你完成第一個自動化流程時，你會感受到一種前所未有的力量：
-- **你不再是工具的使用者，而是工具的製造者。**
-- **你不再是 AI 的聽眾，而是 AI 的指揮官。**
-
-###  開始你的 n8n 學習之旅
-
-**現在就開始吧！** 
-**祝學習順利，早日成為 n8n 專家！** 
-
----
-
-<div align="center">
-
-**如果這個教程對你有幫助，請給它一個 ⭐ Star！**
-
-[![GitHub stars](https://img.shields.io/github/stars/eleven-h/n8n?style=social)](https://github.com/eleven-h/n8n)
-[![GitHub forks](https://img.shields.io/github/forks/eleven-h/n8n?style=social)](https://github.com/eleven-h/n8n)
-[![GitHub issues](https://img.shields.io/github/issues/eleven-h/n8n)](https://github.com/eleven-h/n8n/issues)
-
-</div>
+- 不要將 API Key、OAuth Secret、Token、`.env`、`.n8n`、credentials 匯出檔或真實個資推送到 GitHub。
+- 不要使用 `docker compose down -v`，否則可能刪除本機 n8n 的 volume 與資料。
+- 本機 `localhost` webhook 預設無法由外部服務呼叫；課堂先以 Manual Trigger 測試。
