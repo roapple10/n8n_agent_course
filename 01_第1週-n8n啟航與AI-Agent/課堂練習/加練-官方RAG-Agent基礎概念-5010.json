@@ -1,0 +1,28 @@
+{
+  "name": "第01週加練｜官方 RAG Agent 基礎概念（Template 5010）",
+  "nodes": [
+    {"id": "83ed351e-90e8-458f-a01b-73001ef1800f", "name": "上傳知識檔案", "type": "n8n-nodes-base.formTrigger", "position": [220, -120], "webhookId": "82848bc4-5ea2-4e5a-8bb6-3c09b94a8c5d", "parameters": {"options": {}, "formTitle": "上傳資料以測試 RAG", "formFields": {"values": [{"fieldType": "file", "fieldLabel": "上傳 PDF 或 CSV", "requiredField": true, "acceptFileTypes": ".pdf, .csv"}]}}, "typeVersion": 2.2},
+    {"id": "26d63e24-2592-41f9-9b4b-edab81e99f21", "name": "Embeddings OpenAI", "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi", "position": [860, 360], "parameters": {"options": {}}, "credentials": {"openAiApi": {"id": "credential-id", "name": "請在 n8n 選擇自己的 OpenAI credential"}}, "typeVersion": 1.2},
+    {"id": "3a69c8a7-bf95-4de2-84b0-ae2cc3d2e4e7", "name": "Default Data Loader", "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader", "position": [660, 40], "parameters": {"options": {}, "dataType": "binary"}, "typeVersion": 1.1},
+    {"id": "0b42832b-c9e8-4627-b36c-94fc5e242b33", "name": "說明：RAG 流程", "type": "n8n-nodes-base.stickyNote", "position": [-320, -180], "parameters": {"color": 4, "width": 440, "height": 300, "content": "### RAG 基礎練習\n\n先以左側流程將資料存入向量庫，再以右側流程向 Agent 提問。\n\n1. 執行資料入庫\n2. 開啟聊天\n3. 問一個只能從上傳檔案回答的問題\n\n官方範本來源：n8n Template 5010"}, "typeVersion": 1},
+    {"id": "f902ab8f-4620-4a95-86f7-c5857c4d6c4f", "name": "說明：資料入庫", "type": "n8n-nodes-base.stickyNote", "position": [160, -180], "parameters": {"color": 7, "width": 700, "height": 460, "content": "### 1. 資料入庫\n上傳檔案 → 讀取內容 → 文字向量化 → 存入 Simple Vector Store"}, "typeVersion": 1},
+    {"id": "0f4185ea-d7a9-44a9-a824-98f9dc2c2a5d", "name": "寫入 Simple Vector Store", "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory", "position": [400, -120], "parameters": {"mode": "insert", "memoryKey": {"__rl": true, "mode": "list", "value": "vector_store_key", "cachedResultName": "vector_store_key"}}, "typeVersion": 1.2},
+    {"id": "ce86b41b-7e1b-458f-ab13-d6b187854ae8", "name": "查詢知識庫工具", "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory", "position": [1280, 80], "parameters": {"mode": "retrieve-as-tool", "toolName": "knowledge_base", "memoryKey": {"__rl": true, "mode": "list", "value": "vector_store_key"}, "toolDescription": "用這個知識庫回答使用者問題"}, "typeVersion": 1.2},
+    {"id": "0039537b-558c-4fe8-9716-f8aa13676f4a", "name": "AI Agent", "type": "@n8n/n8n-nodes-langchain.agent", "position": [1280, -140], "parameters": {"options": {}}, "typeVersion": 2},
+    {"id": "2669a65e-f0f3-45aa-95c0-621b15a4fc67", "name": "收到聊天訊息", "type": "@n8n/n8n-nodes-langchain.chatTrigger", "position": [1060, -140], "webhookId": "4091fa09-fb9a-4039-9411-7104d213f601", "parameters": {"options": {}}, "typeVersion": 1.1},
+    {"id": "d43cf585-4192-4f53-9532-4677923289ba", "name": "OpenAI Chat Model", "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi", "position": [1060, 80], "parameters": {"model": {"__rl": true, "mode": "list", "value": "gpt-4o-mini"}, "options": {}}, "typeVersion": 1.2},
+    {"id": "3d1b3f5a-bc35-4739-a618-9c85820d39a0", "name": "說明：檢索回答", "type": "n8n-nodes-base.stickyNote", "position": [940, -180], "parameters": {"color": 7, "width": 680, "height": 460, "content": "### 2. 檢索回答\n聊天問題 → AI Agent → 查詢知識庫工具 → Chat Model 回答"}, "typeVersion": 1},
+    {"id": "8d4c68cf-64d1-4b3a-bb19-2f003303c1df", "name": "說明：相同 Embedding", "type": "n8n-nodes-base.stickyNote", "position": [1000, 320], "parameters": {"color": 4, "width": 320, "height": 240, "content": "### Embeddings\n\n寫入與查詢必須使用相同的 embedding 模型與設定；否則相似度搜尋可能失準。"}, "typeVersion": 1}
+  ],
+  "pinData": {},
+  "connections": {
+    "查詢知識庫工具": {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]},
+    "Embeddings OpenAI": {"ai_embedding": [[{"node": "寫入 Simple Vector Store", "type": "ai_embedding", "index": 0}, {"node": "查詢知識庫工具", "type": "ai_embedding", "index": 0}]]},
+    "OpenAI Chat Model": {"ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]},
+    "Default Data Loader": {"ai_document": [[{"node": "寫入 Simple Vector Store", "type": "ai_document", "index": 0}]]},
+    "上傳知識檔案": {"main": [[{"node": "寫入 Simple Vector Store", "type": "main", "index": 0}]]},
+    "收到聊天訊息": {"main": [[{"node": "AI Agent", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {}
+}
