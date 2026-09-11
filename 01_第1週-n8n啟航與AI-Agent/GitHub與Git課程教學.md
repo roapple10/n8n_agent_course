@@ -14,24 +14,23 @@ git config --global user.email "你的GitHub驗證email@example.com"
 git --version
 ```
 
-## 2. 只下載本課程的 n8n 教材
+## 2. 下載本課程教材
 
 在自己想放教材的資料夾執行：
 
 ```bash
-git clone --filter=blob:none --sparse https://github.com/roapple10/ray_all_project.git n8n-course-source
-cd n8n-course-source
-git sparse-checkout set n8n
+git clone https://github.com/roapple10/n8n_agent_course.git
+cd n8n_agent_course
 ```
 
-這是 sparse clone：只取原始 repo 中的 `n8n` 路徑。GitHub 對 `git clone` 與 `git pull` 的說明見 [Getting changes from a remote repository](https://docs.github.com/en/get-started/using-git/getting-changes-from-a-remote-repository)。
+教材已放在獨立的公開 repo：[roapple10/n8n_agent_course](https://github.com/roapple10/n8n_agent_course)，因此不需要再使用 sparse clone。GitHub 對 `git clone` 與 `git pull` 的說明見 [Getting changes from a remote repository](https://docs.github.com/en/get-started/using-git/getting-changes-from-a-remote-repository)。
 
 ## 3. 取得講師教材更新
 
 每次上課前，進入來源教材資料夾：
 
 ```bash
-cd n8n-course-source
+cd n8n_agent_course
 git pull
 ```
 
