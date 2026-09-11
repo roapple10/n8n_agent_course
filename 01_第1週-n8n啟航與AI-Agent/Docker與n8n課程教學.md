@@ -25,9 +25,9 @@ docker compose version
 
 ## 啟動課程 n8n
 
-1. 在本週資料夾開啟 `docker-compose.yml`。
+1. 在 `Assistant與Sandbox部署` 資料夾開啟 `docker-compose.yml`。
 2. 將 `N8N_ENCRYPTION_KEY` 的示範值換成自己的長隨機字串。此值用來加密 credentials；遺失後既有 credentials 將無法解密。不要把它交作業或上傳 GitHub。
-3. 在 `docker-compose.yml` 所在資料夾執行：
+3. 在 `Assistant與Sandbox部署/docker-compose.yml` 所在資料夾執行：
 
 ```bash
 docker compose up -d
