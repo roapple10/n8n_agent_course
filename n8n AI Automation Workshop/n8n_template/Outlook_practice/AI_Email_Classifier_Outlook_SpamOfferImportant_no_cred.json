@@ -1,0 +1,205 @@
+{
+  "name": "AI Email Classifier & Auto-Delete for Outlook (SPAM/OFFER/IMPORTANT)",
+  "nodes": [
+    {
+      "id": "82021ae4-f381-49a5-b0c6-07f5466ba46a",
+      "name": "New Mail",
+      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        0
+      ],
+      "parameters": {
+        "event": "messageReceived",
+        "output": "simple",
+        "filters": {}
+      },
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Polls Outlook inbox for new mail. Check the node's polling interval in the n8n UI (default varies by version)."
+    },
+    {
+      "id": "c83c05a9-4e7d-4e49-8e05-5b0c0c825a7f",
+      "name": "Azure OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        220
+      ],
+      "parameters": {
+        "model": "gpt-5-mini",
+        "options": {}
+      },
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "id": "75033c61-da11-4496-bc9e-833eb655cf3c",
+      "name": "Classify Email",
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -160,
+        0
+      ],
+      "parameters": {
+        "inputText": "={{ 'Subject: ' + $json.subject + '\\n\\n' + ($json.bodyPreview || '') }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "SPAM",
+              "description": "Bulk junk, scams, phishing, or low-effort mass messages with no legitimate business purpose"
+            },
+            {
+              "category": "OFFER",
+              "description": "Marketing/promotional content with no actionable value to the recipient: discount coupons, sale announcements, abandoned-cart reminders, cold outreach, newsletter blasts"
+            },
+            {
+              "category": "IMPORTANT",
+              "description": "Anything with real value to the recipient even if commercial: order/payment confirmations, shipping updates, genuine personal or business inquiries, invoices. If in doubt, choose this category."
+            }
+          ]
+        },
+        "options": {
+          "multiClass": false
+        }
+      },
+      "notes": "Replaces the original template's Agent+IF combo with the native Text Classifier node (one node, N branches) - current n8n best practice for natural-language routing."
+    },
+    {
+      "id": "b9e736e9-706c-4f44-94cc-8859b7195491",
+      "name": "Move to Junk/Review Folder",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -60
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "move",
+        "messageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('New Mail').item.json.id }}"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": ""
+        }
+      },
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Moves the message into a Junk/Review folder instead of deleting - pick your real folder in the dropdown once credential is connected."
+    },
+    {
+      "id": "note-overview-a",
+      "name": "Sticky Note - Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -320
+      ],
+      "parameters": {
+        "width": 780,
+        "height": 240,
+        "content": "## AI Email Classifier & Auto-Delete (Outlook)\n\nClassifies each new Outlook email as SPAM, OFFER, or IMPORTANT using the Text Classifier node (Azure OpenAI gpt-5-mini). SPAM and OFFER are automatically moved to a Junk/Review folder; IMPORTANT is left untouched in the inbox."
+      }
+    },
+    {
+      "id": "note-warning-a",
+      "name": "Sticky Note - Warning",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -320
+      ],
+      "parameters": {
+        "width": 420,
+        "height": 240,
+        "content": "## ⚠️ Setup needed\n\n\"Move to Junk/Review Folder\" needs a real folder picked in its Folder dropdown (left blank in this template). Classification is fully automatic with no human review - review the folder's contents periodically to catch any misclassifications."
+      }
+    },
+    {
+      "id": "note-important-a",
+      "name": "Sticky Note - IMPORTANT branch",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        140
+      ],
+      "parameters": {
+        "width": 420,
+        "height": 160,
+        "content": "## IMPORTANT branch (intentionally unconnected)\n\nNo action - email stays in the inbox as-is."
+      }
+    }
+  ],
+  "connections": {
+    "New Mail": {
+      "main": [
+        [
+          {
+            "node": "Classify Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Email": {
+      "main": [
+        [
+          {
+            "node": "Move to Junk/Review Folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to Junk/Review Folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

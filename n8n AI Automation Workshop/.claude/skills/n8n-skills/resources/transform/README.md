@@ -1,0 +1,242 @@
+# Data Transformation Nodes
+
+Total: 223 nodes (high-priority: 15, other: 208)
+
+## High-Priority Nodes
+
+The following nodes have individual detailed documentation:
+
+- [Action Network](./nodes-base.actionNetwork.md) - Consume the Action Network API
+- [ActiveCampaign](./nodes-base.activeCampaign.md) - Create and edit data in ActiveCampaign
+- [Adalo](./nodes-base.adalo.md) - Consume Adalo API
+- [Agile CRM](./nodes-base.agileCrm.md) - Consume Agile CRM API
+- [AI Transform](./nodes-base.aiTransform.md) - Modify data based on instructions written in plain english
+- [Airtop](./nodes-base.airtop.md) - Scrape and control any site with Airtop
+- [AMQP Sender](./nodes-base.amqp.md) - Sends a raw-message via AMQP 1.0, executed once per item
+- [APITemplate.io](./nodes-base.apiTemplateIo.md) - Consume the APITemplate.io API
+- [AWS DynamoDB](./nodes-base.awsDynamoDb.md) - Consume the AWS DynamoDB API
+- [Code](./nodes-base.code.md) - Run custom JavaScript or Python code
+- [Function](./nodes-base.function.md) - Run custom function code which gets executed once and allows you to add, remove, change and replace items
+- [Gmail](./nodes-base.gmail.md) - Consume the Gmail API
+- [If](./nodes-base.if.md) - Route items to different branches (true/false)
+- [Merge](./nodes-base.merge.md) - Merges data of multiple streams once data from both is available
+- [OpenAI](./nodes-base.openAi.md) - Consume Open AI
+
+## Other Nodes
+
+The following 208 nodes are merged into 3 files:
+
+- [Part 1](./transform-merged-1.md) - Contains 100 nodes
+- [Part 2](./transform-merged-2.md) - Contains 100 nodes
+- [Part 3](./transform-merged-3.md) - Contains 8 nodes
+
+### Complete Node List
+
+- Aggregate
+- AI Agent
+- AI Agent Tool
+- Anthropic
+- Anthropic Chat Model
+- Auto-fixing Output Parser
+- AWS Bedrock Chat Model
+- Azure AI Search Vector Store
+- Azure Cosmos DB
+- Azure OpenAI Chat Model
+- Azure Storage
+- BambooHR
+- Basic LLM Chain
+- Binary Input Loader
+- Bitwarden
+- Brevo
+- Bubble
+- Calculator
+- Call n8n Sub-Workflow Tool
+- Character Text Splitter
+- Chat Memory Manager
+- Chat Messages Retriever
+- Clockify
+- Code Tool
+- Cohere Chat Model
+- Cohere Model
+- Compare Datasets
+- Compression
+- Contextual Compression Retriever
+- Convert to/from binary data
+- Copper
+- Cortex
+- crowd.dev
+- Crypto
+- Customer Datastore (n8n training)
+- Customer Messenger (n8n training)
+- Date & Time
+- DeepSeek Chat Model
+- Default Data Loader
+- Dropcontact
+- Edit Image
+- Elastic Security
+- Elasticsearch
+- Embeddings AWS Bedrock
+- Embeddings Azure OpenAI
+- Embeddings Cohere
+- Embeddings Google Gemini
+- Embeddings Google Vertex
+- Embeddings Hugging Face Inference
+- Embeddings Lemonade
+- Embeddings Mistral Cloud
+- Embeddings Ollama
+- Embeddings OpenAI
+- Evaluation
+- Execute Command
+- Execute Sub-workflow
+- Facebook Graph API
+- Filter
+- Freshservice
+- Freshworks CRM
+- Function Item
+- Git
+- GitHub Document Loader
+- Gong
+- Google Ads
+- Google Analytics
+- Google Cloud Storage
+- Google Gemini
+- Google Gemini Chat Model
+- Google Perspective
+- Google Vertex Chat Model
+- GoToWebinar
+- Grafana
+- Groq Chat Model
+- Guardrails
+- Hacker News
+- HighLevel
+- HTML
+- HTML Extract
+- Hugging Face Inference Model
+- In Memory Vector Store Insert
+- In Memory Vector Store Load
+- Information Extractor
+- Item List Output Parser
+- Jina AI
+- JSON Input Loader
+- JWT
+- Kafka
+- KoBoToolbox
+- LangChain Code
+- Ldap
+- Lemlist
+- Lemonade Chat Model
+- Lemonade Model
+- Limit
+- LoneScale
+- Mailcheck
+- Marketstack
+- MCP Client
+- Metabase
+- Microsoft Entra ID
+- Microsoft Graph Security
+- Microsoft Outlook
+- Microsoft SharePoint
+- Milvus Vector Store
+- MISP
+- Mistral AI
+- Mistral Cloud Chat Model
+- Mocean
+- Model Selector
+- MongoDB Atlas Vector Store
+- MongoDB Chat Memory
+- Monica CRM
+- Motorhead
+- MSG91
+- MultiQuery Retriever
+- n8n
+- NASA
+- Netlify
+- Odoo
+- Okta
+- Ollama
+- Ollama Chat Model
+- Ollama Model
+- One Simple API
+- OpenAI
+- OpenAI Assistant
+- OpenAI Chat Model
+- OpenAI Model
+- OpenRouter Chat Model
+- Perplexity
+- Pinecone Vector Store
+- Pinecone: Insert
+- Pinecone: Load
+- Pipedrive
+- Plivo
+- PostBin
+- Postgres Chat Memory
+- Postgres PGVector Store
+- Qdrant Vector Store
+- Question and Answer Chain
+- QuickBooks Online
+- RabbitMQ
+- Raindrop
+- Recursive Character Text Splitter
+- Reddit
+- Redis Chat Memory
+- Redis Vector Store
+- Remove Duplicates
+- Rename Keys
+- Reranker Cohere
+- Respond to Webhook
+- Rundeck
+- SearXNG
+- SecurityScorecard
+- SendGrid
+- Sentiment Analysis
+- SerpApi (Google Search)
+- seven
+- SIGNL4
+- Simple Memory
+- Simple Vector Store
+- Sort
+- Split Out
+- Splunk
+- Spreadsheet File
+- Stackby
+- Stripe
+- Structured Output Parser
+- Summarization Chain
+- Summarize
+- Supabase Vector Store
+- Supabase: Insert
+- Supabase: Load
+- Switch
+- Taiga
+- Tapfiliate
+- Text Classifier
+- TheHive
+- TheHive 5
+- Think Tool
+- Token Splitter
+- Tool Executor
+- TOTP
+- Trello
+- Twake
+- Twilio
+- Unleashed Software
+- urlscan.io
+- Vector Store Question Answer Tool
+- Vector Store Retriever
+- Vercel AI Gateway Chat Model
+- Weaviate Vector Store
+- Webex by Cisco
+- Webflow
+- Wekan
+- Wikipedia
+- Wise
+- Wolfram|Alpha
+- Workflow Retriever
+- xAI Grok Chat Model
+- Xata
+- XML
+- Zep
+- Zep Vector Store
+- Zep Vector Store: Insert
+- Zep Vector Store: Load
+- Zoho CRM

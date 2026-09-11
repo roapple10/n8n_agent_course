@@ -1,0 +1,220 @@
+{
+  "id": "302",
+  "name": "03 - Email AI Agent → Draft + Slack Notify",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {},
+        "simple": true
+      },
+      "id": "gml03-0000-0000-0000-000000000001",
+      "name": "New Email Arrives",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are an email classifier. Analyze the email and return ONLY a valid JSON object — no markdown, no explanation, no code block. Use exactly these fields:\n{\n  \"category\": \"Inquiry | Support | Newsletter | Action Required\",\n  \"priority\": \"High | Medium | Low\",\n  \"priorityEmoji\": \"🔴 for High, 🟡 for Medium, 🟢 for Low\"\n}"
+            },
+            {
+              "role": "user",
+              "content": "=Subject: {{ $json.Subject ?? $json.subject ?? '(no subject)' }}\nFrom: {{ $json.From ?? $json.from?.value?.[0]?.address ?? '(unknown sender)' }}\nDate: {{ $json.Date ?? $json.date ?? '' }}\n\nBody:\n{{ ($json.text ?? $json.snippet ?? '(no body)').substring(0, 1000) }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "id": "ai03-0000-0000-0000-000000000002",
+      "name": "AI Email Agent",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a professional email assistant. Write a concise, polished reply to the email below (2-4 sentences). Return ONLY the reply body text — no subject line, no greeting prefix, no labels like 'Draft:'."
+            },
+            {
+              "role": "user",
+              "content": "=Subject: {{ $('New Email Arrives').item.json.Subject ?? $('New Email Arrives').item.json.subject ?? '(no subject)' }}\nFrom: {{ $('New Email Arrives').item.json.From ?? $('New Email Arrives').item.json.from?.value?.[0]?.address ?? '(unknown sender)' }}\n\nBody:\n{{ ($('New Email Arrives').item.json.text ?? $('New Email Arrives').item.json.snippet ?? '(no body)').substring(0, 1500) }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "id": "oai03-0000-0000-0000-000000000007",
+      "name": "Draft Reply",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "subject": "=Re: {{ $('New Email Arrives').item.json.Subject ?? $('New Email Arrives').item.json.subject ?? '(no subject)' }}",
+        "emailType": "text",
+        "message": "={{ $json.message.content }}",
+        "options": {
+          "sendTo": "={{ $('New Email Arrives').item.json.From ?? $('New Email Arrives').item.json.from?.value?.[0]?.address }}"
+        }
+      },
+      "id": "gml03-0000-0000-0000-000000000004",
+      "name": "Create Gmail Draft",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_CHANNEL_ID",
+          "mode": "id"
+        },
+        "text": "={{ JSON.parse($('AI Email Agent').item.json.message.content).priorityEmoji }} *Email Processed — {{ JSON.parse($('AI Email Agent').item.json.message.content).category }}*\n\n*From:* {{ $('New Email Arrives').item.json.From ?? $('New Email Arrives').item.json.from?.value?.[0]?.address ?? '(unknown)' }}\n*Subject:* {{ $('New Email Arrives').item.json.Subject ?? $('New Email Arrives').item.json.subject ?? '(no subject)' }}\n*Priority:* {{ JSON.parse($('AI Email Agent').item.json.message.content).priority }}\n\n*Suggested Reply Draft:*\n```{{ $json.message.content }}```\n\n✉️ _Draft saved to Gmail_",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slk03-0000-0000-0000-000000000005",
+      "name": "Notify Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        900,
+        420
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 📖 Template 03 — Email AI Agent → Draft + Slack\n\n**What it does:** Two dedicated AI calls — one to classify the email, one to write the reply. The draft is saved to Gmail Drafts and a summary is posted to Slack.\n\n**Key learning:** Separation of concerns: each OpenAI node does one job. No Code node needed — OpenAI is smart enough to classify in JSON and draft directly.\n\n**Flow:** New Email → Classify (JSON) → Draft Reply → Gmail Draft + Slack\n\n**Setup (4 steps):**\n1. Select **Gmail credential** in the Gmail Trigger node\n2. Select **OpenAI credential** in AI Email Agent + Draft Reply nodes\n3. Select **Gmail credential** in the Create Gmail Draft node\n4. Replace `REPLACE_WITH_YOUR_CHANNEL_ID` + select **Slack credential**",
+        "height": 270,
+        "width": 460,
+        "color": 6
+      },
+      "id": "note03-0000-0000-0000-000000000006",
+      "name": "Setup Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        540
+      ]
+    }
+  ],
+  "connections": {
+    "New Email Arrives": {
+      "main": [
+        [
+          {
+            "node": "AI Email Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Email Agent": {
+      "main": [
+        [
+          {
+            "node": "Draft Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Reply": {
+      "main": [
+        [
+          {
+            "node": "Create Gmail Draft",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000302",
+  "meta": {
+    "instanceId": ""
+  },
+  "tags": []
+}

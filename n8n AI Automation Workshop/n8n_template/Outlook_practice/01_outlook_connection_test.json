@@ -1,0 +1,54 @@
+{
+  "id": "400",
+  "name": "Outlook Connection Test",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b1e2c3d4-1111-4a2b-8c3d-4e5f6a7b8c9d",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-208, 0]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "toRecipients": "REPLACE_WITH_YOUR_EMAIL@example.com",
+        "subject": "n8n Outlook connection test",
+        "bodyContent": "If you got this, your n8n ↔ Outlook OAuth2 connection works.",
+        "additionalFields": {}
+      },
+      "id": "a9f8e7d6-2222-4b3c-9d4e-5f6a7b8c9d0e",
+      "name": "Send Test Email",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [80, 0]
+    },
+    {
+      "parameters": {
+        "content": "## 📖 Outlook Connection Test\n\n**What it does:** Sends one test email through the Microsoft Outlook node to confirm your Azure OAuth2 credential works.\n\n**Setup (3 steps):**\n1. Azure Portal → Entra ID → App registrations → register app, redirect URI = `https://YOUR_N8N_URL/rest/oauth2-credential/callback`\n2. API permissions (Delegated, Microsoft Graph): `Mail.Send`, `Mail.ReadWrite`, `offline_access`, `User.Read`\n3. In n8n, create **Microsoft Outlook OAuth2 API** credential with your Client ID + Client Secret, click Connect\n\n**Then:** Select the credential in **Send Test Email**, replace `REPLACE_WITH_YOUR_EMAIL@example.com` with your real address, click Test workflow.",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "note01-0000-0000-0000-000000000001",
+      "name": "Setup Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-208, -280]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Send Test Email", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000400",
+  "meta": { "instanceId": "" },
+  "tags": []
+}

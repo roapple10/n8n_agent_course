@@ -1,0 +1,303 @@
+{
+  "id": "203",
+  "name": "04 - Content Script Generator: Telegram + GPT-4o + Voice Transcription",
+  "nodes": [
+    {
+      "id": "walkthrough-4967",
+      "name": "WALKTHROUGH SETUP GUIDE",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [60, -1260],
+      "parameters": {
+        "width": 1060,
+        "height": 1900,
+        "color": 5,
+        "content": "# WALKTHROUGH SETUP GUIDE\n## Template 04: Content Script Generator — Telegram + GPT-4o + Whisper\n\n---\n\n### What This Workflow Does\nUser sends a topic idea or voice message to a Telegram bot → GPT-4o creates a viral social media script (with hooks, storytelling, and CTAs) → Script sent back via Telegram.\n\nSupports BOTH text and voice input:\n- Text: Type your idea directly\n- Voice: Record a voice note → Whisper transcribes it → GPT generates the script\n\n**APIs Needed:** OpenAI (GPT-4o + Whisper) + Telegram Bot (free)\n**Optional:** Google Sheets for logging generated content\n\n---\n\n### Prerequisites Checklist\n- [ ] OpenAI API Key\n- [ ] Telegram account\n- [ ] n8n instance (cloud or self-hosted)\n\n---\n\n### Step 1: Create Telegram Bot (2 min)\n1. Open Telegram, search **@BotFather**\n2. Send `/newbot`\n3. Enter a display name (e.g. \"Content Script Bot\")\n4. Enter a username (e.g. `content_script_bot`)\n5. Copy the **Bot Token** BotFather gives you\n\n---\n\n### Step 2: Configure Telegram Credentials (2 min)\n1. Click the **Telegram Trigger** node\n2. Credentials → **Create New** → Telegram API\n3. Paste your Bot Token → Save\n4. Repeat for all Telegram send nodes (same credential)\n\n---\n\n### Step 3: Configure OpenAI Credentials (1 min)\n1. Click the **OpenAI Chat Model** node (under AI Agent)\n2. Credentials → **Create New** → OpenAI API\n3. Paste your OpenAI API Key → Save\n4. The **Whisper** transcription node uses the same credential — select it there too\n\n---\n\n### Step 4: (Optional) Set Up Google Sheets Logging\n1. Create a Google Sheet with headers: `Date`, `Input`, `Script`, `Type`\n2. Click the **Log to Sheets** node → Create Google Sheets OAuth2 credential\n3. Enter your Sheet ID in the documentId field\n4. If you don't need logging: right-click the node → **Disable**\n\n---\n\n### Step 5: Activate and Test\n1. Click the **Activate** toggle (top-right)\n2. Open Telegram, find your bot\n3. **Test text input:** Send `a story about how I quit my 9-5 job to travel`\n4. **Test voice input:** Record a voice message about any topic\n5. Wait 3-5 seconds\n6. Bot sends back a full viral script!\n\n---\n\n### How the AI Routes Messages\nThe workflow uses a **Switch node** to detect message type:\n- Voice/Audio message → Download → Whisper transcribes → Agent generates script\n- Text message → Directly to Agent\n- Other (images, files) → Error message\n\nThe Switch node checks `$json.message.voice` and `$json.message.text`.\n\n---\n\n### Sample Test Inputs\n- `How I saved 100k before age 25`\n- `The best morning routine that changed my life`\n- `3 AI tools every creator needs in 2024`\n- Voice: Record yourself saying any story idea\n\n---\n\n### Customizing the Script Style\nTo change the output format, edit the **System Prompt** in the AI Agent node:\n- Change from Instagram Reel → YouTube Short → TikTok\n- Adjust tone: professional, funny, inspirational\n- Change length: 30 seconds, 60 seconds, 3 minutes\n\n---\n\n### Troubleshooting\n- **Voice not working?** → Make sure Telegram credentials have file download permission\n- **Script not matching the style?** → Edit the system prompt in the AI Agent node\n- **API errors?** → Check your OpenAI quota at platform.openai.com/usage\n\n---\n\n### Key Learning Concepts\n- **Switch node routing** — branching based on message type (voice vs text)\n- **Whisper transcription** — converting voice to text for AI processing\n- **Memory Buffer** — maintaining conversation context per user session\n- **Creative AI prompting** — system prompts for content generation\n- **Multi-modal input** — same bot handles both voice and text"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "a1b2c3d4-1111-2222-3333-444455556666",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [100, -540],
+      "webhookId": "d4e5f6a7-b8c9-0123-defa-456789012345",
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {"download": true}
+      },
+      "credentials": {
+        "telegramApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "b2c3d4e5-2222-3333-4444-555566667777",
+      "name": "Route by Message Type",
+      "type": "n8n-nodes-base.switch",
+      "position": [320, -540],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {"version": 2, "caseSensitive": true, "typeValidation": "strict"},
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "rule-voice",
+                    "operator": {"type": "object", "operation": "notEmpty"},
+                    "leftValue": "={{ $json.message.voice }}"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Voice"
+            },
+            {
+              "conditions": {
+                "options": {"version": 2, "caseSensitive": true, "typeValidation": "strict"},
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "rule-text",
+                    "operator": {"type": "string", "operation": "notEmpty"},
+                    "leftValue": "={{ $json.message.text }}"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            }
+          ]
+        },
+        "fallbackOutput": "none"
+      },
+      "typeVersion": 3.2
+    },
+    {
+      "id": "c3d4e5f6-3333-4444-5555-666677778888",
+      "name": "Get Voice File",
+      "type": "n8n-nodes-base.telegram",
+      "position": [540, -660],
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "download": true,
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "fix-mime-type",
+      "name": "Fix MIME Type",
+      "type": "n8n-nodes-base.code",
+      "position": [760, -660],
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  if (item.binary?.data) {\n    item.binary.data.mimeType = 'audio/ogg';\n    item.binary.data.fileExtension = 'ogg';\n  }\n  return item;\n}\nreturn $input.all();"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "d4e5f6a7-4444-5555-6666-777788889999",
+      "name": "Transcribe Audio",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [980, -660],
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {"id": "", "name": ""}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "typeVersion": 1.8
+    },
+    {
+      "id": "e5f6a7b8-5555-6666-7777-888899990000",
+      "name": "Set Text from Voice",
+      "type": "n8n-nodes-base.set",
+      "position": [980, -660],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-input-text",
+              "name": "input_text",
+              "type": "string",
+              "value": "={{ $json.text }}"
+            }
+          ]
+        }
+      },
+      "typeVersion": 3.4
+    },
+    {
+      "id": "f6a7b8c9-6666-7777-8888-999900001111",
+      "name": "Set Text from Message",
+      "type": "n8n-nodes-base.set",
+      "position": [540, -440],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-message-text",
+              "name": "input_text",
+              "type": "string",
+              "value": "={{ $json.message.text }}"
+            }
+          ]
+        }
+      },
+      "typeVersion": 3.4
+    },
+    {
+      "id": "a7b8c9d0-7777-8888-9999-000011112222",
+      "name": "Script Generator Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [1200, -540],
+      "parameters": {
+        "text": "={{ $json.input_text }}",
+        "options": {
+          "systemMessage": "You are a viral content script writer for short-form video (Instagram Reels, TikTok, YouTube Shorts).\n\nWhen given a topic or idea, create a compelling, viral-worthy script following this structure:\n\n1. HOOK (first 3 seconds): Start with a bold statement, shocking fact, or question that stops the scroll\n2. STORY/VALUE: 3-5 punchy points or a mini-story that delivers on the hook's promise\n3. CTA: End with a clear, engaging call to action\n\nStyle guidelines:\n- Use conversational language, short sentences\n- Add energy and emotion\n- Each section clearly labeled\n- Total length: 45-60 seconds when spoken (about 120-150 words)\n- Include suggested delivery notes in [brackets]\n\nReturn the script formatted for easy reading. Make it sound natural when spoken aloud."
+        },
+        "promptType": "define"
+      },
+      "typeVersion": 1.9
+    },
+    {
+      "id": "b8c9d0e1-8888-9999-0000-111122223333",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [1200, -340],
+      "parameters": {
+        "model": {"__rl": true, "mode": "list", "value": "gpt-4o-mini"},
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "c9d0e1f2-9999-0000-1111-222233334444",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [1380, -340],
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 5
+      },
+      "typeVersion": 1.3
+    },
+    {
+      "id": "d0e1f2a3-0000-1111-2222-333344445555",
+      "name": "Send Script",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1440, -540],
+      "webhookId": "e5f6a7b8-c9d0-1234-efab-567890123456",
+      "parameters": {
+        "text": "={{ $json.output }}",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "credentials": {
+        "telegramApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "note-routing-4967",
+      "name": "Note: Smart Routing",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [280, -720],
+      "parameters": {
+        "width": 340,
+        "height": 200,
+        "content": "### How Routing Works\nThe **Switch** node checks:\n1. Is there a `voice` field? → Voice path\n2. Is there a `text` field? → Text path\n3. Anything else (image, file) → Error message\n\nBoth paths merge before the AI Agent."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-voice-4967",
+      "name": "Note: Voice Path",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [500, -780],
+      "parameters": {
+        "color": 6,
+        "width": 720,
+        "height": 100,
+        "content": "### Voice Path: Telegram (download:true) → Whisper Transcribe → Set Text → Agent\nTelegram Trigger auto-downloads voice as `$binary.data` — no separate Get File step needed!\n**Configure:** Add your OpenAI API key to the **Transcribe Audio** (Whisper) node"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-agent-4967",
+      "name": "Note: Script Agent",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [1160, -720],
+      "parameters": {
+        "color": 4,
+        "width": 420,
+        "height": 160,
+        "content": "### Script Generator Agent\n- Uses **GPT-4o Mini** for content script generation\n- **Memory Buffer** (5 turns) for follow-up refinements\n- Session key = Telegram chat ID (each user has own context)\n\n**Customize:** Edit the system prompt to change script style/platform"
+      },
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{"node": "Route by Message Type", "type": "main", "index": 0}]]
+    },
+    "Route by Message Type": {
+      "main": [
+        [{"node": "Get Voice File", "type": "main", "index": 0}],
+        [{"node": "Set Text from Message", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Voice File": {
+      "main": [[{"node": "Fix MIME Type", "type": "main", "index": 0}]]
+    },
+    "Fix MIME Type": {
+      "main": [[{"node": "Transcribe Audio", "type": "main", "index": 0}]]
+    },
+    "Transcribe Audio": {
+      "main": [[{"node": "Set Text from Voice", "type": "main", "index": 0}]]
+    },
+    "Set Text from Voice": {
+      "main": [[{"node": "Script Generator Agent", "type": "main", "index": 0}]]
+    },
+    "Set Text from Message": {
+      "main": [[{"node": "Script Generator Agent", "type": "main", "index": 0}]]
+    },
+    "Script Generator Agent": {
+      "main": [[{"node": "Send Script", "type": "main", "index": 0}]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{"node": "Script Generator Agent", "type": "ai_languageModel", "index": 0}]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [{"node": "Script Generator Agent", "type": "ai_memory", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "meta": {"templateId": "4967"},
+  "tags": []
+}

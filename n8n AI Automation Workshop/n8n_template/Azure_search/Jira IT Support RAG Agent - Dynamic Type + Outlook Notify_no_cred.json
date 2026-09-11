@@ -1,0 +1,511 @@
+{
+  "name": "3.Jira IT Support RAG Agent - Dynamic Type + Outlook Notify",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "authentication": "n8nUserAuth",
+        "initialMessages": "Hello, what can I help you with today?",
+        "options": {}
+      },
+      "id": "0f922d64-d8c9-4480-a6cd-658d2728e121",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "position": [
+        -384,
+        368
+      ],
+      "webhookId": "1da9ceac-195c-4c74-a480-8ab1705dbaa3",
+      "typeVersion": 1.1,
+      "notes": "Main entry point for user chat interaction with the IT support agent."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3aba9081-6827-4df2-8a3b-eb2a447c5c0d",
+              "name": "azure_ai_search_service_name",
+              "type": "string",
+              "value": "n8n-search-rag-demo"
+            },
+            {
+              "id": "96121598-e6f1-4119-b3ea-d0cfd58408f4",
+              "name": "azure_ai_search_index_name",
+              "type": "string",
+              "value": "it-support-docs"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "89b7f5da-7ed9-4d8b-a674-78cbdf53c5e3",
+      "name": "Set Common Fields2",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -160,
+        368
+      ],
+      "typeVersion": 3.4,
+      "notes": "Azure AI Search service/index names used by the vector-store tool."
+    },
+    {
+      "parameters": {
+        "model": "gpt-5-mini",
+        "options": {}
+      },
+      "id": "cb8d7008-5351-4758-be3e-485bce521a67",
+      "name": "Azure OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "position": [
+        16,
+        672
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When chat message received').item.json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "id": "d02e4e7d-8d63-44a6-828b-648f80c2223e",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        208,
+        704
+      ],
+      "typeVersion": 1.3,
+      "notes": "Tracks previous messages for multi-turn context."
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When chat message received').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "You are an IT support agent responsible for helping users solve IT-related issues clearly and accurately for Acme Corporation.\n\nYour behavior:\n\t• Always be helpful, specific, and concise.\n\t• Do not make assumptions. If you're not sure, say so.\n\t• Avoid vague answers. Give direct steps or clarifying questions.\n\t• Do not invent information.\n\nHow to respond:\n - Always assume the user is asking about specific internal company information.\n\t• If the vector store returns nothing useful, say: \"I'm not sure. I couldn't find any internal documentation about that.\"\n\nTools:\n\t• Use the vector store to search for answers to company-specific questions.\n\t• Use memory to maintain conversation context across turns.\n\t• If a request needs escalation, create a Jira ticket. When you do, you MUST decide the Issue Type yourself based on the nature of the question:\n\t\t- Story: a feature request or improvement idea\n\t\t- Task: everything else (a routine how-to request, administrative ask, or a broken/error report)\n\tDo not ask the user which type to use - infer it from their message.\n\t• Immediately after successfully creating a Jira ticket, you MUST also call the Send Ticket Notification Email tool - give it a one-line summary of the issue, a concrete recommended next step, and the exact ticket key (e.g. KAN-123) from the Jira tool's response so it can link to the ticket. This is automatic, do not ask the user for permission or a recipient.\n\nExample:\nUser: How do I connect to the VPN?\n\t• If vector search returns relevant info: \"According to internal docs: [quote or summary].\"\n\t• If unsure: \"I don't have an answer for that and couldn't find anything in the docs. Please reach out to IT directly.\""
+        }
+      },
+      "id": "afbc48bf-06d4-4d91-9eb3-06365097c819",
+      "name": "IT Support Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        368,
+        368
+      ],
+      "typeVersion": 1.8,
+      "notes": "Combines memory, LLM reasoning, vector search, and Jira escalation."
+    },
+    {
+      "parameters": {
+        "toolDescription": "Query vector store",
+        "method": "POST",
+        "url": "https://YOUR-NGROK-DOMAIN.ngrok-free.dev/webhook/YOUR-WEBHOOK-ID",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "azure_ai_search_service_name",
+              "value": "={{ $json.azure_ai_search_service_name }}"
+            },
+            {
+              "name": "azure_ai_search_index_name",
+              "value": "={{ $json.azure_ai_search_index_name }}"
+            },
+            {
+              "name": "content",
+              "value": "={{ $('When chat message received').item.json.chatInput }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "678d364c-3a6e-4b30-95cd-c6ce5fd12851",
+      "name": "Invoke Query Vector Store Webhook",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "position": [
+        816,
+        640
+      ],
+      "typeVersion": 4.2,
+      "notes": "Calls this workflow's own Semantic Search webhook to query the Azure AI Search index."
+    },
+    {
+      "parameters": {
+        "toolDescription": "Create a Jira ticket to escalate an IT issue. Automatically picks the Jira Issue Type (Task / Story) based on what kind of question this is - do not ask the user which type, decide it yourself from context.",
+        "method": "POST",
+        "url": "https://YOUR-DOMAIN.atlassian.net/rest/api/3/issue",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "jiraSoftwareCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"fields\": {\n    \"project\": { \"id\": \"10000\" },\n    \"summary\": {{ JSON.stringify($fromAI('Summary', 'One-line summary of the IT issue', 'string')) }},\n    \"issuetype\": { \"name\": {{ JSON.stringify((() => { const raw = ($fromAI('IssueType', \"Pick exactly one word based on the nature of the question: 'Story' if it is a feature request or improvement idea, otherwise 'Task' for routine how-to/requests or problem reports\", 'string') || '').toLowerCase(); return raw.includes('story') ? 'Story' : 'Task'; })()) }} },\n    \"description\": {\n      \"type\": \"doc\",\n      \"version\": 1,\n      \"content\": [\n        {\n          \"type\": \"paragraph\",\n          \"content\": [\n            { \"type\": \"text\", \"text\": {{ JSON.stringify($fromAI('Description', 'Full description of the issue, including what the user reported and relevant context', 'string')) }} }\n          ]\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "7a1f9c3e-2b6d-4e11-9f5a-3c8d6b0a1e42",
+      "name": "Create Jira Ticket (Dynamic Type)",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "position": [
+        432,
+        656
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Dynamic version: calls Jira REST API directly (not the native Jira node) so the issue type can be chosen by name (Bug/Task/Story) via $fromAI instead of a fixed numeric ID."
+    },
+    {
+      "parameters": {
+        "content": "## Use Case: Jira IT Support RAG Agent in Practice\n\nUpload internal documents → generate vectors with Azure OpenAI Embeddings → store them in Azure AI Search → the AI Agent answers questions through semantic retrieval → issues are automatically escalated by creating Jira tickets.\n\nDifference from the base template: the Jira escalation tool now selects a **different Issue Type (Task or Story)** based on the nature of the question, rather than always creating one fixed type. (This project’s available work types are Epic, Story, Subtask, and Task—there is no Bug type.)\n\nNew in this version: after creating a Jira ticket, the agent also sends a summary and recommended next step to **your-email@outlook.com** via Microsoft Graph `sendMail`.",
+        "height": 348,
+        "width": 1500
+      },
+      "id": "note-overview-dynamic-jira",
+      "name": "Sticky Note - Use Case Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        -448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Agent\n\nChat entry point. Azure OpenAI (gpt-5-mini) + 20-turn memory + vector search tool (Semantic Search webhook) + dynamic Jira escalation tool.\n\n**Dynamic Issue Type**: the Jira tool calls the Jira REST API directly (HTTP Request Tool, not the native Jira node) so it can set issuetype by NAME via $fromAI: 'Task' | 'Story'. This project's Work types are Epic/Story/Subtask/Task only (no Bug), so the agent decides Story for feature/improvement ideas and Task for everything else (how-to requests, broken/error reports).\n\n**Outlook notification**: right after creating a ticket, the agent calls \"Send Ticket Notification Email\" (HTTP Request Tool → Microsoft Graph sendMail, native Outlook node can't be an AI tool) with a summary + recommended next step, sent to your-email@outlook.com.",
+        "height": 520,
+        "width": 1500
+      },
+      "id": "note-agent-dynamic-jira",
+      "name": "Sticky Note - Agent (Dynamic Jira)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Send a follow-up notification email about a Jira ticket that was just created. ALWAYS call this immediately after successfully creating a Jira ticket - include a one-line summary of the issue, a concrete recommended next step, and the exact ticket key (e.g. KAN-123) from the Create Jira Ticket tool's response so a link to the ticket can be included. Always sends to the fixed IT inbox automatically, do not ask the user for a recipient.",
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {\n    \"subject\": {{ JSON.stringify('New IT Support Ticket: ' + $fromAI('Summary', 'One-line summary of the IT issue/ticket that was just created', 'string')) }},\n    \"body\": {\n      \"contentType\": \"Text\",\n      \"content\": {{ JSON.stringify('Summary: ' + $fromAI('Summary', 'One-line summary of the IT issue/ticket that was just created', 'string') + '\\n\\nRecommended next step: ' + $fromAI('NextStep', 'A concrete recommended next step for IT or the user to take on this ticket', 'string') + '\\n\\nJira ticket: https://YOUR-DOMAIN.atlassian.net/browse/' + $fromAI('TicketKey', 'The Jira issue key returned by the Create Jira Ticket tool call just now, e.g. KAN-123 - read it from that tool result, do not invent it', 'string')) }}\n    },\n    \"toRecipients\": [ { \"emailAddress\": { \"address\": \"your-email@outlook.com\" } } ]\n  }\n}",
+        "options": {}
+      },
+      "id": "9c3e7a1b-4f22-4a9d-8b6e-2d1f5a8c3e90",
+      "name": "Send Ticket Notification Email",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        624,
+        672
+      ],
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Calls Microsoft Graph sendMail directly (native Outlook node can't be used as an AI tool). Sends ticket summary + recommended next step to your-email@outlook.com."
+    },
+    {
+      "parameters": {
+        "content": "## How to test the Outlook notification\n\n1. Send an escalation prompt in chat, e.g. \"My VPN keeps disconnecting, please open a ticket\"\n2. Logs panel → should show TWO tool calls: \"Create Jira Ticket (Dynamic Type)\" then \"Send Ticket Notification Email\"\n3. Check your-email@outlook.com inbox — email should contain the ticket summary + a recommended next step\n\nIf the email doesn't arrive: check the Microsoft Outlook OAuth2 credential is still connected (tokens can expire) and confirm the agent actually called the email tool in Logs, not just the Jira one.",
+        "height": 260,
+        "width": 900
+      },
+      "id": "note-test-outlook-notify",
+      "name": "Sticky Note - Test Outlook Notify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1376,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Vector Store Search\nWebhook the Agent's tool calls internally. Embeds incoming query text, runs vector+semantic search (top 5) against Azure AI Search index, returns matches to Agent.",
+        "height": 320,
+        "width": 1000
+      },
+      "id": "75d773d8-c8be-4953-89cf-910477d6d1d7",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1136,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.endpoint }}/openai/deployments/{{ $json['text-embedding-model'] }}/embeddings?api-version={{ $json['api-version'] }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "azureOpenAiApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "input",
+              "value": "={{ $json.body.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "eb042404-6b0e-4938-a8b1-d5649df1fb1e",
+      "name": "Get Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1664,
+        400
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Embeds the user's query for similarity search."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "9123feef-55ef-4f1e-853c-d306267ebfba",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "2b0379bf-cc97-4c34-bca8-77175fc20c87",
+      "name": "Semantic Search",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        1232,
+        400
+      ],
+      "webhookId": "9123feef-55ef-4f1e-853c-d306267ebfba",
+      "typeVersion": 2,
+      "notes": "Receives semantic search requests from the agent's tool."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1a6e6b0-1a1a-4a1a-9a1a-1a1a1a1a1a1a",
+              "name": "endpoint",
+              "value": "https://YOUR-RESOURCE.openai.azure.com",
+              "type": "string"
+            },
+            {
+              "id": "c2b7f7c1-2b2b-4b2b-8b2b-2b2b2b2b2b2b",
+              "name": "text-embedding-model",
+              "value": "text-embedding-3-small",
+              "type": "string"
+            },
+            {
+              "id": "d3c8a8d2-3c3c-4c3c-7c3c-3c3c3c3c3c3c",
+              "name": "api-version",
+              "value": "2024-10-21",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "f8d44638-fafc-4226-ab39-b4015b5ffb92",
+      "name": "Mapping Field",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1488,
+        400
+      ],
+      "notes": "Azure OpenAI endpoint/model/api-version, same values as Mapping Field1 — mapped instead of hardcoded in Get Embeddings."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $('Semantic Search').item.json.body.azure_ai_search_service_name }}.search.windows.net/indexes/{{ $('Semantic Search').item.json.body.azure_ai_search_index_name }}/docs/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api-version",
+              "value": "2023-11-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"search\": \"{{ $('Semantic Search').item.json.body.content }}\",\n  \"queryType\": \"semantic\",\n  \"semanticConfiguration\": \"semantic-config\",\n  \"vectorQueries\": [\n    {\n      \"vector\": [{{ $('Get Embeddings').item.json.data[0].embedding }}],\n      \"fields\": \"contentVector\",\n      \"k\": 50,\n      \"kind\": \"vector\"\n    }\n  ],\n  \"select\": \"id,title,content,category\",\n  \"top\": 5\n}",
+        "options": {}
+      },
+      "id": "cfc89939-a51f-4621-907a-efe65f1e89e7",
+      "name": "Query Azure AI Search Index",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1856,
+        400
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Vector + semantic search against the Azure AI Search index."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Set Common Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Common Fields2": {
+      "main": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Jira Ticket (Dynamic Type)": {
+      "ai_tool": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoke Query Vector Store Webhook": {
+      "ai_tool": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Ticket Notification Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Query Azure AI Search Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Semantic Search": {
+      "main": [
+        [
+          {
+            "node": "Mapping Field",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapping Field": {
+      "main": [
+        [
+          {
+            "node": "Get Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  },
+  "versionId": "de550052-0b74-408e-a8fc-62eee06e239d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6e5b0bd14be551897407991d6501fea936ae9678109751ed59d57ac85c973b5e"
+  },
+  "nodeGroups": [],
+  "id": "fXza4Z5ImrRn1Js6",
+  "tags": []
+}

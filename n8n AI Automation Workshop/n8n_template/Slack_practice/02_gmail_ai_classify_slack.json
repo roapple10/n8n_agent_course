@@ -1,0 +1,122 @@
+{
+  "id": "301",
+  "name": "02 - Gmail AI Classify → Slack Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "filters": {},
+        "simple": true
+      },
+      "id": "gml02-0000-0000-0000-000000000001",
+      "name": "New Email Arrives",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are an email classifier. Analyze emails and return ONLY a valid JSON object — no explanation, no markdown, no code blocks.\n\nJSON format:\n{\n  \"category\": \"Inquiry\" | \"Support\" | \"Newsletter\" | \"Action Required\" | \"Other\",\n  \"priority\": \"High\" | \"Medium\" | \"Low\",\n  \"summary\": \"one sentence summary\",\n  \"emoji\": \"❓\" for Inquiry | \"🛠️\" for Support | \"📰\" for Newsletter | \"⚡\" for Action Required | \"📧\" for Other\n}"
+            },
+            {
+              "content": "=Classify this email:\n\nSubject: {{ $json.Subject ?? $json.subject ?? '(no subject)' }}\nFrom: {{ $json.From ?? $json.from?.value?.[0]?.address ?? '(unknown sender)' }}\nBody:\n{{ ($json.text ?? $json.snippet ?? '(no body)').substring(0, 800) }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "id": "ai02-0000-0000-0000-000000000002",
+      "name": "AI Classifier",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON string returned by OpenAI\nconst raw = $input.item.json.message.content.trim();\n\nlet parsed;\ntry {\n  const cleaned = raw.replace(/```json\\n?/g, '').replace(/```/g, '').trim();\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  parsed = { category: 'Other', priority: 'Low', summary: raw, emoji: '📧' };\n}\n\n// Gmail simple:true returns capitalized flat fields (Subject, From)\n// Gmail simple:false returns nested objects (from.value[0].address)\n// Support both with fallbacks\nconst email = $('New Email Arrives').item.json;\nconst subject = email.Subject ?? email.subject ?? '(no subject)';\nconst from = email.From ?? email.from?.value?.[0]?.address ?? '(unknown sender)';\nconst date = email.Date ?? email.date ?? new Date().toISOString();\n\nreturn [{\n  json: {\n    ...parsed,\n    subject,\n    from,\n    date\n  }\n}];"
+      },
+      "id": "code02-0000-0000-0000-000000000003",
+      "name": "Parse AI Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_CHANNEL_ID",
+          "mode": "id"
+        },
+        "text": "={{ $json.emoji }} *New Email — {{ $json.category }}* ({{ $json.priority }} Priority)\n\n*From:* {{ $json.from }}\n*Subject:* {{ $json.subject }}\n*Summary:* {{ $json.summary }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slk02-0000-0000-0000-000000000004",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [900, 300],
+      "credentials": {
+        "slackApi": {
+          "id": "",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 📖 Template 02 — Gmail AI Classify → Slack Alert\n\n**What it does:** Watches your Gmail inbox. When a new email arrives, AI classifies it (category + priority + summary) and posts a formatted alert to Slack.\n\n**Key learning:** AI returns structured JSON → parse it in a Code node → use fields in Slack message\n\n**Setup (3 steps):**\n1. Select your **Gmail credential** in the Gmail Trigger node\n2. Select your **OpenAI credential** in the AI Classifier node\n3. Replace `REPLACE_WITH_YOUR_CHANNEL_ID` with your Slack channel ID and select your **Slack credential**\n\n**Tip:** Test by sending yourself an email, then clicking 'Test workflow'.",
+        "height": 240,
+        "width": 420,
+        "color": 4
+      },
+      "id": "note02-0000-0000-0000-000000000005",
+      "name": "Setup Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 520]
+    }
+  ],
+  "connections": {
+    "New Email Arrives": {
+      "main": [[{ "node": "AI Classifier", "type": "main", "index": 0 }]]
+    },
+    "AI Classifier": {
+      "main": [[{ "node": "Parse AI Result", "type": "main", "index": 0 }]]
+    },
+    "Parse AI Result": {
+      "main": [[{ "node": "Send Slack Alert", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000301",
+  "meta": { "instanceId": "" },
+  "tags": []
+}

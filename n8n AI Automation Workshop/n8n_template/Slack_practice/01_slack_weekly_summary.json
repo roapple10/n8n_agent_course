@@ -1,0 +1,152 @@
+{
+  "id": "300",
+  "name": "01 - Slack Weekly Channel Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtWeekday": 1,
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "sch01-0000-0000-0000-000000000001",
+      "name": "Every Monday 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "history",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_CHANNEL_ID",
+          "mode": "id"
+        },
+        "returnAll": false,
+        "limit": 200,
+        "filters": {
+          "oldest": "={{ $now.minus({ days: 7 }).toUnixInteger() }}"
+        }
+      },
+      "id": "slk01-0000-0000-0000-000000000002",
+      "name": "Get Last 7 Days Messages",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [460, 300],
+      "credentials": {
+        "slackApi": {
+          "id": "",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Keep only real user messages (filter out bots and empty text)\nconst messages = $input.all()\n  .filter(m => m.json.type === 'message' && m.json.text && !m.json.bot_id && !m.json.subtype)\n  .map(m => {\n    const d = new Date(parseFloat(m.json.ts) * 1000);\n    const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;\n    const text = m.json.text.substring(0, 300);\n    return `[${dateStr}] ${text}`;\n  });\n\nif (messages.length === 0) {\n  return [{ json: { messages: 'No messages this week.', count: 0 } }];\n}\n\nreturn [{ json: { messages: messages.join('\\n'), count: messages.length } }];"
+      },
+      "id": "code01-0000-0000-0000-000000000003",
+      "name": "Clean Up Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a helpful team assistant. Create concise, readable Slack digests from channel messages."
+            },
+            {
+              "content": "=Please summarize this past week's Slack channel activity. Format it with these sections (use Slack markdown):\n\n*📋 Key Topics* — What was discussed\n*✅ Decisions* — Any conclusions reached\n*🔔 Action Items* — Things to follow up on\n\nKeep it brief and readable. Here are the messages:\n\n{{ $json.messages }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "id": "ai01-0000-0000-0000-000000000004",
+      "name": "AI Weekly Summary",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_CHANNEL_ID",
+          "mode": "id"
+        },
+        "text": "=📊 *Weekly Summary — Week of {{ $now.toFormat('MM/dd') }}*\n\n{{ $('AI Weekly Summary').item.json.message.content }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slk01-0000-0000-0000-000000000005",
+      "name": "Post Summary to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [1120, 300],
+      "credentials": {
+        "slackApi": {
+          "id": "",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 📖 Template 01 — Slack Weekly Summary\n\n**What it does:** Reads the last 7 days of messages from a Slack channel, summarizes them with GPT-4o-mini, and posts the digest back every Monday at 9am.\n\n**Setup (3 steps):**\n1. Select your **Slack credential** in both Slack nodes\n2. Replace `REPLACE_WITH_YOUR_CHANNEL_ID` with your channel ID\n   → Find it: Right-click channel name → View channel details → Copy ID at the bottom (starts with `C`)\n3. Select your **OpenAI credential** in the AI node\n\n**Test:** Click 'Test workflow' first to see the output before activating.",
+        "height": 240,
+        "width": 420,
+        "color": 5
+      },
+      "id": "note01-0000-0000-0000-000000000006",
+      "name": "Setup Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 520]
+    }
+  ],
+  "connections": {
+    "Every Monday 9am": {
+      "main": [[{ "node": "Get Last 7 Days Messages", "type": "main", "index": 0 }]]
+    },
+    "Get Last 7 Days Messages": {
+      "main": [[{ "node": "Clean Up Messages", "type": "main", "index": 0 }]]
+    },
+    "Clean Up Messages": {
+      "main": [[{ "node": "AI Weekly Summary", "type": "main", "index": 0 }]]
+    },
+    "AI Weekly Summary": {
+      "main": [[{ "node": "Post Summary to Slack", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000300",
+  "meta": { "instanceId": "" },
+  "tags": []
+}

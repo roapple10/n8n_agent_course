@@ -1,0 +1,37 @@
+# ==========================
+# Sensitive / Private Files
+# ==========================
+
+# Environment variables (API keys, secrets)
+.env
+.env.*
+
+# MCP config with hardcoded API keys
+.mcp.json
+
+# Machine-specific Claude local settings
+.claude/settings.local.json
+
+# Private course materials and sensitive documents
+Other/
+
+# ==========================
+# macOS System Files
+# ==========================
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ==========================
+# Editor & IDE
+# ==========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ==========================
+# Logs
+# ==========================
+*.log
+logs/

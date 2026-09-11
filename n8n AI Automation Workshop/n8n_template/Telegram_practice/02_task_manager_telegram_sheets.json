@@ -1,0 +1,351 @@
+{
+  "id": "201",
+  "name": "02 - Task Manager: Telegram AI Agent + Google Sheets + Daily Reminders",
+  "nodes": [
+    {
+      "id": "walkthrough-5291",
+      "name": "WALKTHROUGH SETUP GUIDE",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-600, -960],
+      "parameters": {
+        "width": 1060,
+        "height": 1900,
+        "color": 4,
+        "content": "# WALKTHROUGH SETUP GUIDE\n## Template 02: Task Manager Bot — Telegram + GPT-4o + Google Sheets\n\n---\n\n### What This Workflow Does\nA personal task manager inside Telegram:\n- Add, view, update, delete tasks via chat (GPT-4o understands natural language)\n- Every night at 9 PM: GPT-4o Mini reviews pending tasks and sends a daily summary\n\n**APIs Needed:** OpenAI (GPT-4o + GPT-4o Mini) + Telegram Bot (free) + Google Sheets (free)\n\n---\n\n### Prerequisites Checklist\n- [ ] OpenAI API Key\n- [ ] Telegram account\n- [ ] Google account (for Sheets)\n- [ ] n8n instance (cloud or self-hosted)\n- [ ] Your Telegram Chat ID (explained below)\n\n---\n\n### Step 1: Create Telegram Bot (2 min)\n1. Open Telegram, search **@BotFather**\n2. Send `/newbot`\n3. Enter a display name (e.g. \"Task Manager Bot\")\n4. Enter a username (e.g. `my_taskmanager_bot`)\n5. Copy the **Bot Token** BotFather gives you\n\n---\n\n### Step 2: Get Your Telegram Chat ID (1 min)\nThe scheduled daily reminder needs to know WHERE to send the message.\n1. Start a conversation with your bot in Telegram\n2. Send any message to it\n3. Open this URL in your browser (replace TOKEN with your bot token):\n   `https://api.telegram.org/botTOKEN/getUpdates`\n4. Find `\"chat\":{\"id\":XXXXXXXXX}` — that number is your Chat ID\n5. Copy and save it\n\n---\n\n### Step 3: Create Google Sheet (3 min)\n1. Go to sheets.google.com → Create new spreadsheet\n2. Name it \"Task Manager\"\n3. Add these EXACT headers in Row 1:\n   - A1: `Task`\n   - B1: `Status`\n   - C1: `Created At`\n   - D1: `Due Date`\n   - E1: `Notes`\n4. Copy the Sheet ID from the URL (between `/d/` and `/edit`)\n\n---\n\n### Step 4: Configure Telegram Credentials (2 min)\n1. Click the **Telegram Trigger** node\n2. Credentials → **Create New** → Telegram API\n3. Paste your Bot Token → Save\n4. Repeat for all **Telegram** send nodes (same credential)\n\n---\n\n### Step 5: Configure OpenAI Credentials (1 min)\n1. Click the **OpenAI Chat Model** node (under the main AI Agent)\n2. Credentials → **Create New** → OpenAI API\n3. Paste your OpenAI API Key → Save\n4. Repeat for the **OpenAI Chat Model1** node (used in the scheduled agent)\n\n---\n\n### Step 6: Configure Google Sheets (5 min)\n1. Click any **Google Sheets Tool** node\n2. Credentials → **Create New** → Google Sheets OAuth2 API\n3. Sign in with Google → Authorize\n4. In Document ID: enter your Sheet ID\n5. Repeat for ALL Google Sheets nodes (they all need the same sheet)\n\n---\n\n### Step 7: Set Your Chat ID for Daily Reminders\n1. Click the **Schedule Trigger** node (runs at 21:00 daily)\n2. Click the **AI Agent1** node (the scheduled one)\n3. Look for the Telegram send node at the end of the scheduled path\n4. Replace the hardcoded `chatId` value with your own Chat ID from Step 2\n\n---\n\n### Step 8: Activate and Test\n1. Click the **Activate** toggle (top-right)\n2. Open Telegram, find your bot\n3. Try these commands:\n   - `Add task: Buy groceries by Friday`\n   - `Show all my tasks`\n   - `Mark task 1 as done`\n   - `Delete the grocery task`\n4. Bot replies with a natural language confirmation\n\n---\n\n### Troubleshooting\n- **Sheets not syncing?** → Re-authorize Google credential, verify Sheet ID\n- **Daily reminder not arriving?** → Check Chat ID is correct in the Telegram node\n- **GPT confused by command?** → Try being more explicit: \"Add a new task called X\"\n\n---\n\n### Key Learning Concepts\n- **Dual trigger** — one Telegram Trigger (user-initiated) + one Schedule Trigger (time-based)\n- **AI Agent with Tools** — GPT decides WHICH tool to call (read/create/update/delete)\n- **Google Sheets as a database** — CRUD operations via n8n Sheets nodes\n- **Memory-free agent** — stateless design using Sheets as persistent storage\n- **Natural language commands** → database operations (powerful AI pattern)"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "0d4e36e4-e7e4-4de2-9f1e-3e5a9ac70e3e",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [-400, 0],
+      "webhookId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "1a2b3c4d-5e6f-7890-abcd-ef1234567891",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [-80, 0],
+      "parameters": {
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "You are a helpful task management assistant. You help users manage their tasks stored in Google Sheets.\n\nYou have access to tools to:\n- Read all tasks from Google Sheets\n- Add a new task to Google Sheets\n- Update an existing task (change status, due date, notes)\n- Delete a task from Google Sheets\n\nWhen the user asks to see tasks, list them clearly with their number, status, and due date.\nWhen adding a task, confirm the task was added.\nWhen updating or deleting, confirm the change was made.\nAlways be friendly, concise, and helpful.\n\nTask statuses: Pending, In Progress, Done\n\nToday's date is {{ $now.format('yyyy-MM-dd') }}."
+        },
+        "promptType": "define"
+      },
+      "typeVersion": 1.9
+    },
+    {
+      "id": "2b3c4d5e-6f70-8901-bcde-f12345678902",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [-80, 200],
+      "parameters": {
+        "model": {"__rl": true, "mode": "list", "value": "gpt-4o"},
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "3c4d5e6f-7081-9012-cdef-123456789013",
+      "name": "Read All Tasks",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "position": [80, 200],
+      "parameters": {
+        "name": "read_tasks",
+        "description": "Read all tasks from Google Sheets. Returns all rows with task name, status, created date, due date, and notes.",
+        "sheetName": {"__rl": true, "mode": "list", "value": "gid=0", "cachedResultName": "Sheet1"},
+        "documentId": {"__rl": true, "mode": "list", "value": "", "cachedResultName": "Task Manager"}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "", "name": ""}
+      },
+      "typeVersion": 4.5
+    },
+    {
+      "id": "4d5e6f70-8192-0123-defa-234567890124",
+      "name": "Add Task",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "position": [240, 200],
+      "parameters": {
+        "name": "add_task",
+        "description": "Add a new task to Google Sheets. Provide task name, status (default: Pending), due date, and optional notes.",
+        "operation": "append",
+        "columns": {
+          "value": {
+            "Task": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Task', 'The name/description of the task', 'string') }}",
+            "Status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Status', 'Task status: Pending, In Progress, or Done', 'string') }}",
+            "Created At": "={{ $now.format('yyyy-MM-dd') }}",
+            "Due Date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Due_Date', 'Optional due date in YYYY-MM-DD format', 'string') }}",
+            "Notes": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Notes', 'Optional additional notes', 'string') }}"
+          },
+          "schema": [
+            {"id": "Task", "type": "string", "display": true, "required": true, "displayName": "Task", "defaultMatch": false, "canBeUsedToMatch": true},
+            {"id": "Status", "type": "string", "display": true, "required": false, "displayName": "Status", "defaultMatch": false, "canBeUsedToMatch": true},
+            {"id": "Created At", "type": "string", "display": true, "required": false, "displayName": "Created At", "defaultMatch": false, "canBeUsedToMatch": false},
+            {"id": "Due Date", "type": "string", "display": true, "required": false, "displayName": "Due Date", "defaultMatch": false, "canBeUsedToMatch": true},
+            {"id": "Notes", "type": "string", "display": true, "required": false, "displayName": "Notes", "defaultMatch": false, "canBeUsedToMatch": false}
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "sheetName": {"__rl": true, "mode": "list", "value": "gid=0", "cachedResultName": "Sheet1"},
+        "documentId": {"__rl": true, "mode": "list", "value": "", "cachedResultName": "Task Manager"}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "", "name": ""}
+      },
+      "typeVersion": 4.5
+    },
+    {
+      "id": "5e6f7081-9203-1234-efab-345678901235",
+      "name": "Update Task",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "position": [400, 200],
+      "parameters": {
+        "name": "update_task",
+        "description": "Update an existing task in Google Sheets. Provide the task name to match and the new values to update.",
+        "operation": "update",
+        "columns": {
+          "value": {
+            "Task": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Task', 'The task name to match and update', 'string') }}",
+            "Status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Status', 'New status: Pending, In Progress, or Done', 'string') }}",
+            "Due Date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Due_Date', 'New due date in YYYY-MM-DD format', 'string') }}",
+            "Notes": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Notes', 'Updated notes', 'string') }}"
+          },
+          "schema": [
+            {"id": "Task", "type": "string", "display": true, "required": true, "displayName": "Task", "defaultMatch": true, "canBeUsedToMatch": true},
+            {"id": "Status", "type": "string", "display": true, "required": false, "displayName": "Status", "defaultMatch": false, "canBeUsedToMatch": false},
+            {"id": "Due Date", "type": "string", "display": true, "required": false, "displayName": "Due Date", "defaultMatch": false, "canBeUsedToMatch": false},
+            {"id": "Notes", "type": "string", "display": true, "required": false, "displayName": "Notes", "defaultMatch": false, "canBeUsedToMatch": false}
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": ["Task"],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "sheetName": {"__rl": true, "mode": "list", "value": "gid=0", "cachedResultName": "Sheet1"},
+        "documentId": {"__rl": true, "mode": "list", "value": "", "cachedResultName": "Task Manager"}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "", "name": ""}
+      },
+      "typeVersion": 4.5
+    },
+    {
+      "id": "6f708192-0314-2345-fabc-456789012346",
+      "name": "Delete Task",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "position": [560, 200],
+      "parameters": {
+        "name": "delete_task",
+        "description": "Delete a task from Google Sheets by matching the task name.",
+        "operation": "delete",
+        "toDelete": {
+          "values": [
+            {
+              "column": "Task",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Task_Name', 'The exact task name to delete', 'string') }}"
+            }
+          ]
+        },
+        "sheetName": {"__rl": true, "mode": "list", "value": "gid=0", "cachedResultName": "Sheet1"},
+        "documentId": {"__rl": true, "mode": "list", "value": "", "cachedResultName": "Task Manager"}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "", "name": ""}
+      },
+      "typeVersion": 4.5
+    },
+    {
+      "id": "7081920a-142b-3456-abcd-567890123457",
+      "name": "Reply to User",
+      "type": "n8n-nodes-base.telegram",
+      "position": [240, 0],
+      "webhookId": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "parameters": {
+        "text": "={{ $json.output }}",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "8192031b-253c-4567-bcde-678901234568",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [-400, 520],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 21,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "typeVersion": 1.3
+    },
+    {
+      "id": "9203142c-364d-5678-cdef-789012345679",
+      "name": "AI Agent1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [-80, 520],
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a helpful task manager assistant. Review the user's current tasks from Google Sheets and create a friendly, concise daily summary.\n\nInclude:\n- Total number of pending and in-progress tasks\n- Any tasks due today or overdue (highlight these!)\n- A motivational closing message\n\nToday's date is {{ $now.format('yyyy-MM-dd') }}.\n\nFormat the message nicely for Telegram (use emojis sparingly). Keep it under 300 words."
+        },
+        "promptType": "auto"
+      },
+      "typeVersion": 1.9
+    },
+    {
+      "id": "a314253d-475e-6789-defa-890123456780",
+      "name": "OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [-80, 720],
+      "parameters": {
+        "model": {"__rl": true, "mode": "list", "value": "gpt-4o-mini"},
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "b42536ef-586f-7890-efab-901234567891",
+      "name": "Read Tasks for Summary",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "position": [80, 720],
+      "parameters": {
+        "name": "read_all_tasks",
+        "description": "Read all current tasks from Google Sheets to review for the daily summary.",
+        "sheetName": {"__rl": true, "mode": "list", "value": "gid=0", "cachedResultName": "Sheet1"},
+        "documentId": {"__rl": true, "mode": "list", "value": "", "cachedResultName": "Task Manager"}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "", "name": ""}
+      },
+      "typeVersion": 4.5
+    },
+    {
+      "id": "c53647f0-697a-8901-fabc-012345678902",
+      "name": "Send Daily Summary",
+      "type": "n8n-nodes-base.telegram",
+      "position": [240, 520],
+      "webhookId": "c3d4e5f6-a7b8-9012-cdef-345678901234",
+      "parameters": {
+        "text": "={{ $json.output }}",
+        "chatId": "=YOUR_TELEGRAM_CHAT_ID_HERE",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "note-flow1-5291",
+      "name": "Note: Interactive Task Flow",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-440, -240],
+      "parameters": {
+        "width": 980,
+        "height": 120,
+        "color": 3,
+        "content": "### FLOW 1: Interactive Task Management (User-triggered via Telegram)\nUser sends message → AI Agent decides which tool to call → Google Sheets CRUD → Reply to user\n\n**GPT-4o** is used here for better instruction-following on complex CRUD requests."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-flow2-5291",
+      "name": "Note: Daily Reminder Flow",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-440, 400],
+      "parameters": {
+        "width": 980,
+        "height": 120,
+        "color": 6,
+        "content": "### FLOW 2: Daily Summary (Schedule-triggered at 9 PM)\nSchedule Trigger (21:00 daily) → AI Agent reads all tasks → GPT-4o Mini generates summary → Sends to your Telegram\n\nIMPORTANT: Replace `YOUR_TELEGRAM_CHAT_ID_HERE` in the Send Daily Summary node with your actual Chat ID."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-sheets-5291",
+      "name": "Note: Google Sheets Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [600, 80],
+      "parameters": {
+        "width": 380,
+        "height": 300,
+        "color": 2,
+        "content": "### Google Sheets Setup\nCreate a new Google Sheet with these EXACT column headers in Row 1:\n\n| A | B | C | D | E |\n|---|---|---|---|---|\n| Task | Status | Created At | Due Date | Notes |\n\n**Configure ALL Google Sheets nodes with:**\n1. Your Google Sheets OAuth2 credential\n2. Your spreadsheet ID (from the URL)\n3. Sheet1 as the sheet name\n\nStatus values: `Pending`, `In Progress`, `Done`"
+      },
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{"node": "AI Agent", "type": "main", "index": 0}]]
+    },
+    "AI Agent": {
+      "main": [[{"node": "Reply to User", "type": "main", "index": 0}]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]
+      ]
+    },
+    "Read All Tasks": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "Add Task": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "Update Task": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "Delete Task": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "Schedule Trigger": {
+      "main": [[{"node": "AI Agent1", "type": "main", "index": 0}]]
+    },
+    "AI Agent1": {
+      "main": [[{"node": "Send Daily Summary", "type": "main", "index": 0}]]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [{"node": "AI Agent1", "type": "ai_languageModel", "index": 0}]
+      ]
+    },
+    "Read Tasks for Summary": {
+      "ai_tool": [[{"node": "AI Agent1", "type": "ai_tool", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "meta": {"templateId": "5291"},
+  "tags": []
+}

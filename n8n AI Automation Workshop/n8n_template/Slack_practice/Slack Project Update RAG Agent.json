@@ -1,0 +1,278 @@
+{
+    "name": "Slack Project Update RAG Agent",
+    "nodes": [
+        {
+            "parameters": {
+                "trigger": [
+                    "any_event",
+                    "app_mention"
+                ],
+                "channelId": {
+                    "__rl": true,
+                    "value": "",
+                    "mode": "list",
+                    "cachedResultName": ""
+                },
+                "options": {
+                    "userIds": "==[\"User_ID\"]"
+                }
+            },
+            "id": "44bc7fc6-9736-48e9-90dc-3098047abdc7",
+            "name": "Slack Trigger",
+            "type": "n8n-nodes-base.slackTrigger",
+            "position": [
+                880,
+                160
+            ],
+            "typeVersion": 1,
+            "webhookId": "",
+            "credentials": {
+                "slackApi": {
+                    "id": "",
+                    "name": ""
+                }
+            }
+        },
+        {
+            "parameters": {
+                "model": {
+                    "__rl": true,
+                    "value": "gpt-4.1-mini",
+                    "mode": "list",
+                    "cachedResultName": "gpt-4.1-mini"
+                },
+                "options": {}
+            },
+            "id": "aabbb277-80f5-4316-8845-f34bce33261b",
+            "name": "OpenAI Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+            "position": [
+                1104,
+                384
+            ],
+            "typeVersion": 1.2,
+            "credentials": {
+                "openAiApi": {
+                    "id": "",
+                    "name": ""
+                }
+            }
+        },
+        {
+            "parameters": {
+                "sessionIdType": "customKey",
+                "sessionKey": "={{ $json.channel }}"
+            },
+            "id": "14cb0538-fe7e-4739-9de9-129723400e44",
+            "name": "Simple Memory",
+            "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+            "position": [
+                1280,
+                384
+            ],
+            "typeVersion": 1.3
+        },
+        {
+            "parameters": {
+                "select": "channel",
+                "channelId": {
+                    "__rl": true,
+                    "mode": "id",
+                    "value": "={{ $('Slack Trigger').item.json.channel }}"
+                },
+                "text": "={{ $json.output }}",
+                "otherOptions": {
+                    "includeLinkToWorkflow": false,
+                    "sendAsUser": "Jacob"
+                }
+            },
+            "id": "92db15e1-3228-476f-a3da-1736e8f34d53",
+            "name": "Send a message",
+            "type": "n8n-nodes-base.slack",
+            "position": [
+                1840,
+                160
+            ],
+            "typeVersion": 2.3,
+            "webhookId": "",
+            "credentials": {
+                "slackApi": {
+                    "id": "",
+                    "name": ""
+                }
+            }
+        },
+        {
+            "parameters": {
+                "content": "Slack Respond as a User",
+                "height": 624,
+                "width": 304,
+                "color": 3
+            },
+            "id": "24714547-eecf-4b11-a58f-c394dc7bc9e4",
+            "name": "Sticky Note",
+            "type": "n8n-nodes-base.stickyNote",
+            "position": [
+                1760,
+                0
+            ],
+            "typeVersion": 1
+        },
+        {
+            "parameters": {
+                "content": "GPT-5 Agent",
+                "height": 624,
+                "width": 704,
+                "color": 4
+            },
+            "id": "387b6478-c255-42ba-b456-8b90d889e261",
+            "name": "Sticky Note1",
+            "type": "n8n-nodes-base.stickyNote",
+            "position": [
+                1040,
+                0
+            ],
+            "typeVersion": 1
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.text }}",
+                "options": {
+                    "systemMessage": "You are a n8n-assistant Agent. Your job is to respond to user\nqueries with accuraten responses - do no hallucinate, if you don't know\nthe answer definitively, say so.\n\n#Tool\nUse the Google Doc tool attached to refer to n8n question"
+                }
+            },
+            "id": "d4e0c080-fdcc-45b9-89ac-da6ff9d1de4e",
+            "name": "GPT 5 Slack Agent",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "position": [
+                1200,
+                160
+            ],
+            "typeVersion": 2
+        },
+        {
+            "parameters": {
+                "content": "Slack Trigger",
+                "height": 624,
+                "color": 5
+            },
+            "id": "7070bd4b-bc9e-426b-a6d9-074d386d86dd",
+            "name": "Sticky Note2",
+            "type": "n8n-nodes-base.stickyNote",
+            "position": [
+                784,
+                0
+            ],
+            "typeVersion": 1
+        },
+        {
+            "parameters": {
+                "content": "🛠 GPT-5 + Pinecone-Powered Slack Auto-Responder — Real-Time, Context-Aware Replies for IT & Engineering Teams\n\nDescription\nCut down on context-switching and keep your Slack threads moving with an AI agent that responds on your behalf, pulling real-time knowledge from a Pinecone vector database. Built for IT, DevOps, and engineering environments, this n8n workflow ensures every reply is accurate, context-aware, and instantly available—without you lifting a finger.\n\nCheck out step-by-step video build of workflows like these here:\nhttps://www.youtube.com/@automatewithmarc\n\nHow It Works\n\nSlack Listener: Triggers when you're mentioned or messaged in relevant channels.\n\nPinecone RAG Retrieval: Pulls the most relevant technical details from your indexed documents, architecture notes, or runbooks.\n\nGPT-5 Processing: Formats the retrieved data into a clear, concise, and technically accurate reply.\n\nThread-Aware Memory: Maintains the conversation state to avoid repeating answers.\n\nSlack Send-as-User: Posts the message under your identity for seamless integration into team workflows.\n\nWhy IT Teams Will Love It\n\n📚 Always up-to-date — If your Pinecone index is refreshed with system docs, runbooks, or KB articles, the bot will always deliver the latest info.\n\n🏗 Technical context retention — Perfect for answering ongoing infrastructure or incident threads.\n\n⏱ Reduced interruption time — No more breaking focus to answer \"quick questions.\"\n\n🔐 Controlled outputs — Tune GPT-5 to deliver fact-based, low-fluff responses for critical environments.\n\nCommon Use Cases\n\nDevOps: Automated responses to common CI/CD, deployment, or incident queries.\n\nSupport Engineering: Pulling troubleshooting steps directly from KB entries.\n\nProject Coordination: Instant status updates pulled from sprint or release notes.\n\nPro Tips for Deployment\n\nKeep your Pinecone vector DB updated with the latest architecture diagrams, release notes, and SOPs.\n\nUse embeddings tuned for technical documentation to improve retrieval accuracy.\n\nAdd channel-specific prompts if different teams require different response styles (e.g., #devops vs #product).",
+                "height": 1008,
+                "width": 752,
+                "color": 2
+            },
+            "id": "c11871c8-557c-42f6-ab82-f287b1178798",
+            "name": "Sticky Note3",
+            "type": "n8n-nodes-base.stickyNote",
+            "position": [
+                0,
+                0
+            ],
+            "typeVersion": 1
+        },
+        {
+            "parameters": {
+                "operation": "get",
+                "documentURL": "",
+                "simple": false
+            },
+            "type": "n8n-nodes-base.googleDocsTool",
+            "typeVersion": 2,
+            "position": [
+                1408,
+                416
+            ],
+            "id": "f040a8cb-07a7-4f83-9ce1-1cc6c968b65a",
+            "name": "Get a document in Google Docs",
+            "credentials": {
+                "googleDocsOAuth2Api": {
+                    "id": "",
+                    "name": ""
+                }
+            }
+        }
+    ],
+    "pinData": {},
+    "connections": {
+        "Simple Memory": {
+            "ai_memory": [
+                [
+                    {
+                        "node": "GPT 5 Slack Agent",
+                        "type": "ai_memory",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Slack Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "GPT 5 Slack Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "GPT 5 Slack Agent": {
+            "main": [
+                [
+                    {
+                        "node": "Send a message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "GPT 5 Slack Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get a document in Google Docs": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "GPT 5 Slack Agent",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1",
+        "binaryMode": "separate"
+    },
+    "versionId": "cd1f3366-f671-4e8c-a9fc-ce2a2e3121d1",
+    "meta": {
+        "instanceId": "",
+        "templateCredsSetupCompleted": true
+    },
+    "nodeGroups": [],
+    "id": "",
+    "tags": []
+}

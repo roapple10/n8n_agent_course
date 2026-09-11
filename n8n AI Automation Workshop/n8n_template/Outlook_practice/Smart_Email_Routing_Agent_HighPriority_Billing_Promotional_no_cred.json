@@ -1,0 +1,303 @@
+{
+  "name": "Smart Email Routing Agent - High Priority / Billing / Promotional",
+  "nodes": [
+    {
+      "id": "34138469-63eb-446d-81ed-389769894ab9",
+      "name": "New Mail",
+      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        0
+      ],
+      "parameters": {
+        "event": "messageReceived",
+        "output": "simple",
+        "filters": {}
+      },
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Polls Outlook inbox for new mail."
+    },
+    {
+      "id": "25cbf229-b5c1-4bb3-ab13-eb01156bfb6d",
+      "name": "Azure OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        240
+      ],
+      "parameters": {
+        "model": "gpt-5-mini",
+        "options": {}
+      },
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "id": "8434625e-b834-43f7-8670-d05dcf54d9d2",
+      "name": "Classify Email",
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -220,
+        0
+      ],
+      "parameters": {
+        "inputText": "={{ 'Subject: ' + $json.subject + '\\n\\n' + ($json.bodyPreview || '') }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "HighPriority",
+              "description": "Urgent or time-sensitive: outages, escalations, angry customers, deadlines today, requests from executives/VIPs - anything needing an immediate response"
+            },
+            {
+              "category": "Billing",
+              "description": "Invoices, payment confirmations, subscription renewals, refunds, account charges, billing disputes"
+            },
+            {
+              "category": "Promotional",
+              "description": "Marketing emails, newsletters, discounts, sales, cold outreach, ads"
+            }
+          ]
+        },
+        "options": {
+          "multiClass": false,
+          "fallback": "other"
+        }
+      },
+      "notes": "Inspired by n8n community template #2851 (eCommerce department routing via Text Classifier). One node, N branches - do not use Agent+Switch for this."
+    },
+    {
+      "id": "90786491-06c5-48c3-8897-0bc80492633b",
+      "name": "Draft Reply Text",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        80,
+        -260
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a short, professional acknowledgement reply to this email. Confirm we've received it, note that it's been flagged as high priority and is being looked at now, and ask for any additional detail that would help resolve it faster. Keep it under 80 words, no subject line, plain text only.\n\nOriginal email:\nSubject: {{ $('New Mail').item.json.subject }}\n\n{{ $('New Mail').item.json.bodyPreview }}",
+        "options": {}
+      },
+      "notes": "One-shot draft generation - Basic LLM Chain, not a full Agent (no tools/memory needed here)."
+    },
+    {
+      "id": "8250a0fa-2c7d-467f-beb5-5dff2a50d5f5",
+      "name": "Create Draft Reply",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        340,
+        -260
+      ],
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "subject": "=Re: {{ $('New Mail').item.json.subject }}",
+        "toRecipients": "={{ $('New Mail').item.json.from.emailAddress.address }}",
+        "bodyContent": "={{ $json.text }}",
+        "additionalFields": {
+          "bodyContentType": "Text"
+        }
+      },
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Creates a DRAFT (does not send). \"from\" field path assumes simplified trigger output - verify against your actual trigger output shape and adjust the expression if needed."
+    },
+    {
+      "id": "fbebd045-ab33-4f4a-8fd1-f06943fd4ef8",
+      "name": "Move to Billing Folder",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "move",
+        "messageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('New Mail').item.json.id }}"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": ""
+        }
+      },
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Pick your real Billing folder in the Folder dropdown once credential is connected - left blank in this template."
+    },
+    {
+      "id": "3b7a087a-c743-49cc-bb6c-19ca6e2b39f2",
+      "name": "Tag as Promotional",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        260
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "update",
+        "messageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('New Mail').item.json.id }}"
+        },
+        "updateFields": {
+          "categories": [
+            "Promotional"
+          ]
+        }
+      },
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Assigns the Outlook category \"Promotional\" to the message (create this category once in Outlook if it doesn't already exist)."
+    },
+    {
+      "id": "note-overview-b",
+      "name": "Sticky Note - Use Case Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -420
+      ],
+      "parameters": {
+        "width": 900,
+        "height": 260,
+        "content": "## Smart Classification Agent (Routing Architecture)\n\nUses the Text Classifier node to precisely route incoming mail into 3 branches: High Priority / Billing / Promotional.\n\nInspired by n8n community template #2851 (eCommerce department routing) - adapted here to inbox triage, using Microsoft Outlook + Azure OpenAI (gpt-5-mini).\n\nFollow-up action per branch:\n- High Priority: auto-drafted acknowledgement reply (LLM-drafted, saved as Draft, not sent)\n- Billing: auto-filed to a designated folder (move to folder)\n- Promotional: auto-tagged (category)"
+      }
+    },
+    {
+      "id": "note-fallback-b",
+      "name": "Sticky Note - Other branch",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        260
+      ],
+      "parameters": {
+        "width": 500,
+        "height": 160,
+        "content": "## \"Other\" branch (4th output, intentionally unconnected)\n\noptions.fallback = \"other\" means anything not matching the 3 categories lands here instead of silently dropping. No action wired - email stays in inbox untouched."
+      }
+    },
+    {
+      "id": "note-setup-b",
+      "name": "Sticky Note - Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        340,
+        260
+      ],
+      "parameters": {
+        "width": 500,
+        "height": 220,
+        "content": "## Setup checklist\n\n1. \"Move to Billing Folder\" - pick your real Billing folder (left blank)\n2. \"Tag as Promotional\" - create an Outlook category named \"Promotional\" if you don't have one\n3. \"Create Draft Reply\" - verify the sender-address expression matches your trigger's output shape\n4. Test each branch with a sample email matching each category"
+      }
+    }
+  ],
+  "connections": {
+    "New Mail": {
+      "main": [
+        [
+          {
+            "node": "Classify Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ],
+        {
+          "node": "Draft Reply Text",
+          "type": "ai_languageModel",
+          "index": 0
+        }
+      ]
+    },
+    "Classify Email": {
+      "main": [
+        [
+          {
+            "node": "Draft Reply Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to Billing Folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag as Promotional",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Draft Reply Text": {
+      "main": [
+        [
+          {
+            "node": "Create Draft Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

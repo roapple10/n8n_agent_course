@@ -1,0 +1,832 @@
+{
+  "name": "2.Jira IT Support RAG Agent - Dynamic Issue Type Demo",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "authentication": "n8nUserAuth",
+        "initialMessages": "Hello, what can I help you with today?",
+        "options": {}
+      },
+      "id": "d06a023b-1917-4aa2-8463-63a61ecd0cbf",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "position": [
+        80,
+        1584
+      ],
+      "webhookId": "9ec4a092-6f52-46c4-b908-9d09e3c87ef8",
+      "typeVersion": 1.1,
+      "notes": "Main entry point for user chat interaction with the IT support agent."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3aba9081-6827-4df2-8a3b-eb2a447c5c0d",
+              "name": "azure_ai_search_service_name",
+              "type": "string",
+              "value": "n8n-search-rag-demo"
+            },
+            {
+              "id": "96121598-e6f1-4119-b3ea-d0cfd58408f4",
+              "name": "azure_ai_search_index_name",
+              "type": "string",
+              "value": "it-support-docs"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0ac5d92c-4da8-456b-b44a-5f51c9291cb3",
+      "name": "Set Common Fields2",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        304,
+        1584
+      ],
+      "typeVersion": 3.4,
+      "notes": "Azure AI Search service/index names used by the vector-store tool."
+    },
+    {
+      "parameters": {
+        "model": "gpt-5-mini",
+        "options": {}
+      },
+      "id": "e883888b-2715-44cd-a6b6-bea7913fb86f",
+      "name": "Azure OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "position": [
+        528,
+        1808
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When chat message received').item.json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "id": "ba5b914c-f382-4874-b3e7-0f86c4073384",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        704,
+        1856
+      ],
+      "typeVersion": 1.3,
+      "notes": "Tracks previous messages for multi-turn context."
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When chat message received').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "You are an IT support agent responsible for helping users solve IT-related issues clearly and accurately for Acme Corporation.\n\nYour behavior:\n\t• Always be helpful, specific, and concise.\n\t• Do not make assumptions. If you're not sure, say so.\n\t• Avoid vague answers. Give direct steps or clarifying questions.\n\t• Do not invent information.\n\nHow to respond:\n - Always assume the user is asking about specific internal company information.\n\t• If the vector store returns nothing useful, say: \"I'm not sure. I couldn't find any internal documentation about that.\"\n\nTools:\n\t• Use the vector store to search for answers to company-specific questions.\n\t• Use memory to maintain conversation context across turns.\n\t• If a request needs escalation, create a Jira ticket. When you do, you MUST decide the Issue Type yourself based on the nature of the question:\n\t\t- Story: a feature request or improvement idea\n\t\t- Task: everything else (a routine how-to request, administrative ask, or a broken/error report)\n\tDo not ask the user which type to use - infer it from their message.\n\nExample:\nUser: How do I connect to the VPN?\n\t• If vector search returns relevant info: \"According to internal docs: [quote or summary].\"\n\t• If unsure: \"I don't have an answer for that and couldn't find anything in the docs. Please reach out to IT directly.\""
+        }
+      },
+      "id": "d4bd7f6a-1b01-4acf-b8d5-dcf077d038a7",
+      "name": "IT Support Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        832,
+        1584
+      ],
+      "typeVersion": 1.8,
+      "notes": "Combines memory, LLM reasoning, vector search, and Jira escalation."
+    },
+    {
+      "parameters": {
+        "toolDescription": "Query vector store",
+        "method": "POST",
+        "url": "https://YOUR-NGROK-DOMAIN.ngrok-free.dev/webhook/YOUR-WEBHOOK-ID",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "azure_ai_search_service_name",
+              "value": "={{ $json.azure_ai_search_service_name }}"
+            },
+            {
+              "name": "azure_ai_search_index_name",
+              "value": "={{ $json.azure_ai_search_index_name }}"
+            },
+            {
+              "name": "content",
+              "value": "={{ $('When chat message received').item.json.chatInput }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bf443dc4-5903-4a52-9b94-371892f96295",
+      "name": "Invoke Query Vector Store Webhook",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "position": [
+        1200,
+        1872
+      ],
+      "typeVersion": 4.2,
+      "notes": "Calls this workflow's own Semantic Search webhook to query the Azure AI Search index."
+    },
+    {
+      "parameters": {},
+      "id": "d1b044f8-7a72-4b05-be41-9e5f0e7ad986",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        160,
+        400
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3aba9081-6827-4df2-8a3b-eb2a447c5c0d",
+              "name": "azure_ai_search_service_name",
+              "type": "string",
+              "value": "ray-search-rag-demo"
+            },
+            {
+              "id": "96121598-e6f1-4119-b3ea-d0cfd58408f4",
+              "name": "azure_ai_search_index_name",
+              "type": "string",
+              "value": "it-support-docs"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4edef3d-a2a6-41c9-8524-09cc9974b09c",
+      "name": "Set Common Fields",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        384,
+        400
+      ],
+      "notesInFlow": false,
+      "typeVersion": 3.4,
+      "notes": "Azure AI Search service/index names for one-time index creation."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $('Set Common Fields').item.json.azure_ai_search_service_name }}.search.windows.net/indexes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api-version",
+              "value": "2023-11-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $('Set Common Fields').item.json.azure_ai_search_index_name }}\",\n  \"fields\": [\n    { \"name\": \"id\", \"type\": \"Edm.String\", \"key\": true, \"searchable\": false, \"filterable\": true, \"retrievable\": true },\n    { \"name\": \"title\", \"type\": \"Edm.String\", \"searchable\": true, \"retrievable\": true },\n    { \"name\": \"content\", \"type\": \"Edm.String\", \"searchable\": true, \"retrievable\": true },\n    { \"name\": \"category\", \"type\": \"Edm.String\", \"searchable\": true, \"filterable\": true, \"retrievable\": true },\n    { \"name\": \"contentVector\", \"type\": \"Collection(Edm.Single)\", \"searchable\": true, \"retrievable\": true, \"dimensions\": 1536, \"vectorSearchProfile\": \"vector-profile\" }\n  ],\n  \"vectorSearch\": {\n    \"algorithms\": [ { \"name\": \"hnsw-algorithm\", \"kind\": \"hnsw\", \"hnswParameters\": { \"m\": 4, \"efConstruction\": 400, \"efSearch\": 500, \"metric\": \"cosine\" } } ],\n    \"profiles\": [ { \"name\": \"vector-profile\", \"algorithm\": \"hnsw-algorithm\" } ]\n  },\n  \"semantic\": {\n    \"configurations\": [ { \"name\": \"semantic-config\", \"prioritizedFields\": { \"titleField\": { \"fieldName\": \"title\" }, \"prioritizedContentFields\": [ { \"fieldName\": \"content\" } ], \"prioritizedKeywordsFields\": [ { \"fieldName\": \"category\" } ] } } ]\n  }\n}",
+        "options": {}
+      },
+      "id": "30de677a-83c0-4f70-9980-1de1c525c43b",
+      "name": "Create Azure AI Vector Index",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1232,
+        400
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "One-time: creates the vector + semantic index schema. Run once via manual trigger."
+    },
+    {
+      "parameters": {
+        "content": "## 1. Create the Azure AI Search Index (run once, manual trigger)",
+        "height": 280,
+        "width": 1420
+      },
+      "id": "8382d9c7-1f30-422e-9d03-8fb635440a68",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        16,
+        288
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "toolDescription": "Create a Jira ticket to escalate an IT issue. Automatically picks the Jira Issue Type (Task / Story) based on what kind of question this is - do not ask the user which type, decide it yourself from context.",
+        "method": "POST",
+        "url": "https://YOUR-DOMAIN.atlassian.net/rest/api/3/issue",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "jiraSoftwareCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"fields\": {\n    \"project\": { \"id\": \"10000\" },\n    \"summary\": {{ JSON.stringify($fromAI('Summary', 'One-line summary of the IT issue', 'string')) }},\n    \"issuetype\": { \"name\": {{ JSON.stringify((() => { const raw = ($fromAI('IssueType', \"Pick exactly one word based on the nature of the question: 'Story' if it is a feature request or improvement idea, otherwise 'Task' for routine how-to/requests or problem reports\", 'string') || '').toLowerCase(); return raw.includes('story') ? 'Story' : 'Task'; })()) }} },\n    \"description\": {\n      \"type\": \"doc\",\n      \"version\": 1,\n      \"content\": [\n        {\n          \"type\": \"paragraph\",\n          \"content\": [\n            { \"type\": \"text\", \"text\": {{ JSON.stringify($fromAI('Description', 'Full description of the issue, including what the user reported and relevant context', 'string')) }} }\n          ]\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "311a8945-47b8-40f4-95cf-549fed4a6ed0",
+      "name": "Create Jira Ticket (Dynamic Type)",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "position": [
+        896,
+        1872
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Dynamic version: calls Jira REST API directly (not the native Jira node) so the issue type can be chosen by name (Bug/Task/Story) via $fromAI instead of a fixed numeric ID."
+    },
+    {
+      "parameters": {
+        "content": "## Use Case: Jira IT Support RAG Agent in Practice\n\nUpload internal documents → generate vectors with Azure OpenAI Embeddings → store them in Azure AI Search → AI Agent answers questions through semantic retrieval → automatically creates and escalates Jira tickets when needed.\n\nDifference from the base template: the Jira escalation tool now selects a **different Issue Type (Task or Story)** based on the nature of the question, instead of always creating one fixed type. (This project’s available work types are Epic, Story, Subtask, and Task—there is no Bug type.)",
+        "height": 220,
+        "width": 1500
+      },
+      "id": "703b6e66-30e8-41ae-8b68-c560f9daf7c1",
+      "name": "Sticky Note - Use Case Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Agent\n\nChat entry point. Azure OpenAI (gpt-5-mini) + 20-turn memory + vector search tool (Semantic Search webhook) + dynamic Jira escalation tool.\n\n**Dynamic Issue Type**: the Jira tool calls the Jira REST API directly (HTTP Request Tool, not the native Jira node) so it can set issuetype by NAME via $fromAI: 'Task' | 'Story'. This project's Work types are Epic/Story/Subtask/Task only (no Bug), so the agent decides Story for feature/improvement ideas and Task for everything else (how-to requests, broken/error reports).",
+        "height": 1128,
+        "width": 1500
+      },
+      "id": "6558476c-6005-4340-91a0-e4f7239d777d",
+      "name": "Sticky Note - Agent (Dynamic Jira)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## How to test dynamic Issue Type\n\nNote: this Jira project's Work types are Epic / Story / Subtask / Task only (no Bug) — the agent picks between Task and Story.\n\nOpen chat, try each and check the resulting Jira ticket's Issue Type:\n\n**Task** (routine how-to/request, or a broken/error report)\n- \"My VPN keeps disconnecting every few minutes, please open a ticket\"\n- \"I need my account password reset, please file a ticket for IT\"\n\n**Story** (feature request/improvement)\n- \"Can we add SSO login for the VPN client? Please log this as a ticket\"\n\nVerify: Logs panel → \"Create Jira Ticket (Dynamic Type)\" → Output shows created issue → confirm in Jira the Issue Type field matches (Task / Story) based on which prompt you sent.",
+        "height": 592,
+        "width": 1000
+      },
+      "id": "8e87d029-80f9-46f6-b633-c05fd5d0712b",
+      "name": "Sticky Note - Test Dynamic Issue Type",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1008,
+        1552
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "IT Support Agent Knowledge",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Documents",
+              "fieldType": "file",
+              "acceptFileTypes": ".txt,.md",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "={{ $form_response }}"
+            }
+          }
+        }
+      },
+      "id": "66dd8a7f-73f1-41c0-bc77-422674b04f1e",
+      "name": "On Knowledge Upload2",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        112,
+        768
+      ],
+      "webhookId": "7c028e27-bf08-4426-9c4e-51af6df8ec0c",
+      "typeVersion": 2.2,
+      "notes": "File upload form for internal documentation (.txt/.md)."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "$binary",
+        "options": {}
+      },
+      "id": "ca239ab3-be08-4a18-8d29-3b324a3c6840",
+      "name": "Split Out Binary Files2",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        320,
+        768
+      ],
+      "typeVersion": 1,
+      "notes": "Splits each uploaded file for individual processing."
+    },
+    {
+      "parameters": {
+        "jsCode": "function generateGUID() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j;\n  var result = '';\n  var words = [];\n  var asciiBitLength = ascii[lengthProperty] * 8;\n  var hash = (sha256.h = sha256.h || []);\n  var k = (sha256.k = sha256.k || []);\n  var primeCounter = k[lengthProperty];\n  var isComposite = {};\n  for (var candidate = 2; primeCounter < 64; candidate++) {\n    if (!isComposite[candidate]) {\n      for (i = 0; i < 313; i += candidate) {\n        isComposite[i] = candidate;\n      }\n      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;\n      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;\n    }\n  }\n  ascii += '\\x80';\n  while ((ascii[lengthProperty] % 64) - 56) ascii += '\\x00';\n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    if (j >> 8) return;\n    words[i >> 2] |= j << ((3 - i) % 4) * 8;\n  }\n  words[words[lengthProperty]] = (asciiBitLength / maxWord) | 0;\n  words[words[lengthProperty]] = asciiBitLength;\n  for (j = 0; j < words[lengthProperty]; ) {\n    var w = words.slice(j, (j += 16));\n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var a = hash[0], e = hash[4];\n      var temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ (~e & hash[6])) + k[i] + (w[i] = i < 16 ? w[i] : (w[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);\n      var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));\n      hash = [(temp1 + temp2) | 0, a, hash[1], hash[2], (hash[3] + temp1) | 0, hash[4], hash[5], hash[6]];\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  for (i = 0; i < 8; i++) {\n    for (j = 3; j + 1; j--) {\n      var b = (hash[i] >> (j * 8)) & 255;\n      result += (b < 16 ? '0' : '') + b.toString(16);\n    }\n  }\n  return result;\n}\n\nlet items = []\nfor (let index = 0; index < $input.all().length; index++) {\n  const key = $input.all().length > 1 ? `Documents_${index}` : 'Documents'\n  const doc = $input.all()[index].binary[key]\n  const buffer = await this.helpers.getBinaryDataBuffer(index, key)\n  const content = buffer.toString('utf-8')\n  items.push({\n    'id': sha256(content),\n    'title': doc.fileName,\n    'content' : content,\n    'category' : 'General',\n  })\n}\n\nreturn items"
+      },
+      "id": "710b078c-2037-4901-9e17-eb331e51b947",
+      "name": "Prep Content2",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        528,
+        768
+      ],
+      "typeVersion": 2,
+      "notes": "Decodes base64 content, extracts metadata, generates hash ID."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.endpoint }}/openai/deployments/{{ $json['text-embedding-model'] }}/embeddings?api-version={{ $json['api-version'] }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "azureOpenAiApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "input",
+              "value": "={{ $('Prep Content2').item.json.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ff4b7d56-e78f-4d85-9738-3464d16cda12",
+      "name": "Get Embeddings3",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1104,
+        768
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Sends document text to OpenAI's embedding API."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $('Mapping Field1').item.json.azure_ai_search_service_name }}.search.windows.net/indexes/{{ $('Mapping Field1').item.json.azure_ai_search_index_name }}/docs/index",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api-version",
+              "value": "2023-11-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"value\": [\n    {\n     \"@search.action\": \"mergeOrUpload\",\n     \"id\": {{ JSON.stringify($('Prep Content2').item.json.id) }},\n     \"title\": {{ JSON.stringify($('Prep Content2').item.json.title) }},\n     \"content\": {{ JSON.stringify($('Prep Content2').item.json.content) }},\n     \"category\": {{ JSON.stringify($('Prep Content2').item.json.category) }},\n     \"contentVector\": [\n        {{ $('Get Embeddings3').item.json.data[0].embedding }}\n      ]\n   }\n  ]\n}",
+        "options": {}
+      },
+      "id": "0f9a324e-4893-4755-b716-5fb2f373083c",
+      "name": "Upload Embedding to Vector Store2",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1328,
+        768
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Uploads document + embedding to Azure AI Search index via mergeOrUpload."
+    },
+    {
+      "parameters": {
+        "content": "## 2. Uploading Docs to Azure AI Search Index\nUpload .txt/.md via form → decode base64, hash id (sha256), extract title/content → embed via Azure OpenAI → upsert (mergeOrUpload) into index from section 1. Run once per doc/batch.",
+        "height": 280,
+        "width": 1540
+      },
+      "id": "fe42a015-30d9-49ef-bb3a-e26e6dffb3f4",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        48,
+        624
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3aba9081-6827-4df2-8a3b-eb2a447c5c0d",
+              "name": "azure_ai_search_service_name",
+              "type": "string",
+              "value": "n8n-search-rag-demo"
+            },
+            {
+              "id": "96121598-e6f1-4119-b3ea-d0cfd58408f4",
+              "name": "azure_ai_search_index_name",
+              "type": "string",
+              "value": "it-support-docs"
+            },
+            {
+              "id": "a60ca21a-2661-4cca-8c7d-cd9dde2ec24c",
+              "name": "endpoint",
+              "value": "https://YOUR-RESOURCE.openai.azure.com",
+              "type": "string"
+            },
+            {
+              "id": "f5bdbfb4-c179-4b86-a4ef-90de36fc2fe8",
+              "name": "text-embedding-model",
+              "value": "text-embedding-3-small",
+              "type": "string"
+            },
+            {
+              "id": "d71f7091-63f4-4bb0-af1a-29d59509c601",
+              "name": "api-version",
+              "value": "2024-10-21",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d25dfca6-9e4c-4011-8576-c946d61ff959",
+      "name": "Mapping Field1",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        800,
+        768
+      ],
+      "typeVersion": 3.4,
+      "notes": "Azure AI Search service/index names for document upload."
+    },
+    {
+      "parameters": {
+        "content": "## Vector Store Search\nWebhook the Agent's tool calls internally. Embeds incoming query text, runs vector+semantic search (top 5) against Azure AI Search index, returns matches to Agent.",
+        "height": 320,
+        "width": 1000
+      },
+      "id": "77dfc89c-e3c2-4475-a13c-92be3007d721",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1712,
+        1232
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "9123feef-55ef-4f1e-853c-d306267ebfba",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a09f8844-0394-4a75-8385-e2053c4b93a7",
+      "name": "Semantic Search1",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        1808,
+        1392
+      ],
+      "webhookId": "9123feef-55ef-4f1e-853c-d306267ebfba",
+      "typeVersion": 2,
+      "notes": "Receives semantic search requests from the agent's tool."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.endpoint }}/openai/deployments/{{ $json['text-embedding-model'] }}/embeddings?api-version={{ $json['api-version'] }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "azureOpenAiApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "input",
+              "value": "={{ $json.body.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d6dd037a-08c2-431c-9093-a0444b88e078",
+      "name": "Get Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2240,
+        1392
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Embeds the user's query for similarity search."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $('Semantic Search1').item.json.body.azure_ai_search_service_name }}.search.windows.net/indexes/{{ $('Semantic Search1').item.json.body.azure_ai_search_index_name }}/docs/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api-version",
+              "value": "2023-11-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"search\": \"{{ $('Semantic Search1').item.json.body.content }}\",\n  \"queryType\": \"semantic\",\n  \"semanticConfiguration\": \"semantic-config\",\n  \"vectorQueries\": [\n    {\n      \"vector\": [{{ $('Get Embeddings').item.json.data[0].embedding }}],\n      \"fields\": \"contentVector\",\n      \"k\": 50,\n      \"kind\": \"vector\"\n    }\n  ],\n  \"select\": \"id,title,content,category\",\n  \"top\": 5\n}",
+        "options": {}
+      },
+      "id": "093118da-46ff-40da-a3c6-6dc5bc65065b",
+      "name": "Query Azure AI Search Index1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2432,
+        1392
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": ""
+        }
+      },
+      "notes": "Vector + semantic search against the Azure AI Search index."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1a6e6b0-1a1a-4a1a-9a1a-1a1a1a1a1a1a",
+              "name": "endpoint",
+              "value": "https://YOUR-RESOURCE.openai.azure.com",
+              "type": "string"
+            },
+            {
+              "id": "c2b7f7c1-2b2b-4b2b-8b2b-2b2b2b2b2b2b",
+              "name": "text-embedding-model",
+              "value": "text-embedding-3-small",
+              "type": "string"
+            },
+            {
+              "id": "d3c8a8d2-3c3c-4c3c-7c3c-3c3c3c3c3c3c",
+              "name": "api-version",
+              "value": "2024-10-21",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "e4d9b9e3-4d4d-4d4d-6d4d-4d4d4d4d4d4d",
+      "name": "Mapping Field2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2064,
+        1392
+      ],
+      "notes": "Azure OpenAI endpoint/model/api-version, same values as Mapping Field1 — mapped instead of hardcoded in Get Embeddings."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Set Common Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Common Fields2": {
+      "main": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Jira Ticket (Dynamic Type)": {
+      "ai_tool": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoke Query Vector Store Webhook": {
+      "ai_tool": [
+        [
+          {
+            "node": "IT Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Set Common Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Common Fields": {
+      "main": [
+        [
+          {
+            "node": "Create Azure AI Vector Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Knowledge Upload2": {
+      "main": [
+        [
+          {
+            "node": "Split Out Binary Files2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Binary Files2": {
+      "main": [
+        [
+          {
+            "node": "Prep Content2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Content2": {
+      "main": [
+        [
+          {
+            "node": "Mapping Field1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Embeddings3": {
+      "main": [
+        [
+          {
+            "node": "Upload Embedding to Vector Store2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapping Field1": {
+      "main": [
+        [
+          {
+            "node": "Get Embeddings3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Query Azure AI Search Index1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Semantic Search1": {
+      "main": [
+        [
+          {
+            "node": "Mapping Field2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapping Field2": {
+      "main": [
+        [
+          {
+            "node": "Get Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "6952deb2-9323-464b-a992-6bcbeee87a4a",
+  "meta": {
+    "instanceId": "6e5b0bd14be551897407991d6501fea936ae9678109751ed59d57ac85c973b5e"
+  },
+  "nodeGroups": [],
+  "id": "OF32JZ0DwGsIe0wN",
+  "tags": []
+}

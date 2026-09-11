@@ -1,0 +1,240 @@
+{
+  "id": "202",
+  "name": "03 - AI Image Generator: Telegram + GPT-4o Mini",
+  "nodes": [
+    {
+      "id": "walkthrough-4467",
+      "name": "WALKTHROUGH SETUP GUIDE",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-940, -900],
+      "parameters": {
+        "width": 1040,
+        "height": 1600,
+        "color": 5,
+        "content": "# WALKTHROUGH SETUP GUIDE\n## Template 03: AI Image Generator via Telegram + GPT-4o Mini\n\n---\n\n### What This Workflow Does\nUser sends a rough idea to a Telegram bot (e.g. \"a dragon in a neon Tokyo city\") → GPT-4o Mini expands it into a rich image prompt → DALL-E 3 generates the image as binary → Image sent back to user via Telegram.\n\n**APIs Needed:** OpenAI (GPT-4o Mini prompt engineer + gpt-image-1-mini image gen) + Telegram Bot (free)\n**Optional:** Google Drive + Google Sheets (to save image history)\n\n---\n\n### Prerequisites Checklist\n- [ ] OpenAI API Key (needs DALL-E access — standard account works)\n- [ ] Telegram account\n- [ ] n8n instance (cloud or self-hosted)\n- [ ] (Optional) Google account for Drive/Sheets\n\n---\n\n### Step 1: Create Telegram Bot (2 min)\n1. Open Telegram, search **@BotFather**\n2. Send `/newbot`\n3. Enter a display name (e.g. \"AI Art Bot\")\n4. Enter a username ending in `bot` (e.g. `my_aiart_bot`)\n5. Copy the **Bot Token** BotFather gives you\n\n---\n\n### Step 2: Configure Telegram Credentials (2 min)\n1. Click the **Telegram Trigger** node\n2. Credentials → **Create New** → Telegram API\n3. Paste your Bot Token → Save\n4. Repeat for the **Send Photo** node (same credential)\n\n---\n\n### Step 3: Configure OpenAI Credentials (1 min)\n1. Click the **OpenAI Chat Model** node (under Image Prompt agent)\n2. Credentials → **Create New** → OpenAI API → Paste key → Save\n3. Click the **Generate an image** node → select the same credential\n\n> No HTTP Request node needed — the OpenAI node returns binary data directly!\n\n---\n\n### Step 4: (Optional) Google Drive and Sheets\n1. Click the **Google Drive** node → Create Google Drive OAuth2 credential\n2. Click the **Image Log** node → Create Google Sheets OAuth2 credential + set Sheet ID\n3. To skip: right-click both nodes → **Disable**\n\n---\n\n### Step 5: Activate and Test\n1. Click the **Activate** toggle (top-right)\n2. Open Telegram, find your bot\n3. Send: `a samurai cat in cyberpunk Tokyo at night`\n4. Wait 5-10 seconds → Bot sends back a generated image!\n\n---\n\n### Test Prompts to Try\n- `a futuristic city floating in clouds`\n- `a cute panda writing code on a laptop`\n- `logo for an AI startup, minimalist blue and white`\n- `a dragon made of data and light`\n\n---\n\n### Troubleshooting\n- **No image returned?** → Check OpenAI credential on Generate an image node\n- **Bot not responding?** → Verify Telegram Token in Trigger node\n- **DALL-E quota?** → Check usage at platform.openai.com/usage\n\n---\n\n### Key Learning Concepts\n- **Telegram Trigger** — receiving user input via bot\n- **AI Agent as Prompt Engineer** — LLM improving inputs before generation\n- **OpenAI image node (binary)** — generates image and returns binary data directly\n- **Telegram sendPhoto with binaryData** — sending binary directly, no URL needed\n- **Pipeline pattern** → Input → Enhance → Generate → Deliver"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "91e34b1e-4d15-482f-bb07-86c81c32b478",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [-920, -240],
+      "webhookId": "a9997053-40e2-4d1d-9abc-f2e5b6582096",
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "d9cee081-13cd-4ed4-843c-84e3e4e6c3d5",
+      "name": "Image Prompt",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [-640, -240],
+      "parameters": {
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "You are an expert image prompt engineer. Your job is to take a short user idea and expand it into a detailed, vivid, and high-quality prompt for DALL-E 3 image generation. Make the prompt specific about style, lighting, mood, composition, and subject details. Keep it under 200 words. Return only the prompt, no explanations."
+        },
+        "promptType": "define"
+      },
+      "typeVersion": 1.9
+    },
+    {
+      "id": "f63c6038-a6dd-41c6-9db1-c42e6f21636a",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [-640, -80],
+      "parameters": {
+        "model": {"__rl": true, "mode": "list", "value": "gpt-4o-mini"},
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "generate-image-node",
+      "name": "Generate an image",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [-360, -240],
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-image-1-mini",
+          "mode": "id"
+        },
+        "prompt": "={{ $json.output }}",
+        "options": {},
+        "images": {
+          "values": [{}]
+        }
+      },
+      "credentials": {
+        "openAiApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 2.3
+    },
+    {
+      "id": "fd75b2ba-57f8-4ce3-8d39-915a96f7cef8",
+      "name": "Send Photo",
+      "type": "n8n-nodes-base.telegram",
+      "position": [160, -240],
+      "webhookId": "8fcbda9c-8396-41f7-8f2d-39e4ae4337c7",
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "operation": "sendPhoto",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {"id": "", "name": ""}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "9d2a73d3-fc71-47e4-94c5-1c79dd6b3a30",
+      "name": "Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [-80, -80],
+      "parameters": {
+        "name": "=ai_image_{{ $now.toFormat('yyyy-MM-dd_HHmmss') }}",
+        "driveId": {"__rl": true, "mode": "list", "value": "My Drive"},
+        "options": {},
+        "folderId": {"__rl": true, "mode": "list", "value": "root", "cachedResultUrl": "https://drive.google.com/drive", "cachedResultName": "/ (Root folder)"}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {"id": "", "name": ""}
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "a4ac1967-64d1-455c-abef-bc3804d0cad4",
+      "name": "Image Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [160, -80],
+      "parameters": {
+        "columns": {
+          "value": {
+            "Title": "={{ $json.name }}",
+            "Image URL": "={{ $json.webViewLink }}"
+          },
+          "schema": [
+            {"id": "Image URL", "type": "string", "display": true, "removed": false, "required": false, "displayName": "Image URL", "defaultMatch": false, "canBeUsedToMatch": true},
+            {"id": "Title", "type": "string", "display": true, "removed": false, "required": false, "displayName": "Title", "defaultMatch": false, "canBeUsedToMatch": true}
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {},
+        "operation": "append",
+        "sheetName": {"__rl": true, "mode": "list", "value": "gid=0", "cachedResultName": "Sheet1"},
+        "documentId": {"__rl": true, "mode": "list", "value": "", "cachedResultName": "AI Image Log"}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "", "name": ""}
+      },
+      "typeVersion": 4.5
+    },
+    {
+      "id": "note-trigger-4467",
+      "name": "Note: Telegram Trigger",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-940, -440],
+      "parameters": {
+        "width": 300,
+        "height": 140,
+        "content": "### Step 1: Telegram Trigger\nUser sends ANY text message to the bot.\n\n**Configure:** Add Bot Token from @BotFather here.\n\nExample input: `a robot cat in Tokyo`"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-agent-4467",
+      "name": "Note: Prompt Engineer Agent",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-740, -440],
+      "parameters": {
+        "color": 6,
+        "width": 360,
+        "height": 160,
+        "content": "### Step 2: GPT-4o Mini (Prompt Engineer)\nExpands the user's short idea into a detailed, vivid DALL-E prompt.\n\n**Configure:** Add OpenAI API key to the **OpenAI Chat Model** sub-node.\n\nOutput: `$json.output` (the expanded prompt)"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-generate-4467",
+      "name": "Note: Generate Image",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-380, -440],
+      "parameters": {
+        "color": 4,
+        "width": 380,
+        "height": 160,
+        "content": "### Step 3: Generate an image (OpenAI node)\nUses the **official n8n OpenAI node** (resource: image, DALL-E 3).\nReturns **binary data directly** — no HTTP download step needed!\n\n**Configure:** Select your OpenAI credential here.\n\nModel: `gpt-image-1-mini`"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-send-4467",
+      "name": "Note: Send Photo",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [20, -440],
+      "parameters": {
+        "width": 320,
+        "height": 160,
+        "content": "### Step 4: Send Photo (Telegram)\nSends the binary image directly to the user.\n\n- `binaryData: true`\n- `binaryPropertyName: \"data\"`\n\n**Configure:** Select same Telegram credential."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-optional-4467",
+      "name": "Note: Optional Save",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-120, -260],
+      "parameters": {
+        "color": 2,
+        "width": 480,
+        "height": 140,
+        "content": "### (Optional) Save to Google Drive + Log to Sheets\nSaves a copy of the image and logs the URL.\nTo skip: right-click **Google Drive** and **Image Log** nodes → **Disable**\n\n**Configure:** Google Drive OAuth2 + Google Sheets OAuth2 credentials."
+      },
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{"node": "Image Prompt", "type": "main", "index": 0}]]
+    },
+    "Image Prompt": {
+      "main": [[{"node": "Generate an image", "type": "main", "index": 0}]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{"node": "Image Prompt", "type": "ai_languageModel", "index": 0}]
+      ]
+    },
+    "Generate an image": {
+      "main": [
+        [
+          {"node": "Send Photo", "type": "main", "index": 0},
+          {"node": "Google Drive", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [[{"node": "Image Log", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "meta": {"templateId": "4467"},
+  "tags": []
+}
