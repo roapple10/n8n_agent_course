@@ -1,0 +1,165 @@
+{
+  "name": "第05週｜LINE Bot 潛客分析",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line-lead-analysis",
+        "responseMode": "onReceived",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "line-webhook",
+      "name": "LINE Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "line-lead-analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "const originalWebhook = $('LINE Webhook').first().json;\nconst body = originalWebhook.body ?? originalWebhook;\nconst events = Array.isArray(body.events) ? body.events : [];\nreturn events\n  .filter(e => e.type === 'message' && e.message?.type === 'text' && e.replyToken)\n  .map(e => {\n    const text = String(e.message.text ?? '').trim();\n    const budget = /預算|\\$|NT\\$|萬元|萬|\\d{4,}/i.test(text);\n    const timeline = /本週|這週|立即|盡快|一個月|下個月|期限|時程/.test(text);\n    const need = /需要|想|希望|導入|自動化|CRM|客服|預約|報價/.test(text);\n    const score = Math.min(100, 20 + (text.length >= 20 ? 15 : 0) + (budget ? 25 : 0) + (timeline ? 20 : 0) + (need ? 20 : 0));\n    const priority = score >= 75 ? '高' : score >= 50 ? '中' : '待培養';\n    const nextAction = score >= 75 ? '建議 1 個工作日內由專人確認需求與預算。' : score >= 50 ? '建議補問預算、決策時程與主要需求。' : '先提供服務介紹，待需求明確後再評估。';\n    return { json: { replyToken: e.replyToken, userId: e.source?.userId ?? '', message: text, score, priority, nextAction } };\n  });"
+      },
+      "id": "parse-score",
+      "name": "解析與評分（教學規則）",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replyToken: $json.replyToken, messages: [{ type: \"text\", text: `【需求初步分析】\\n評分：${$json.score}/100（${$json.priority}）\\n摘要：${$json.message.slice(0, 120)}\\n建議：${$json.nextAction}\\n\\n此為自動初步分類，實際方案與價格請由專人確認。` }] }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "line-reply",
+      "name": "回覆 LINE（設定 Token）",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "type": "SHA256",
+        "dataPropertyName": "expectedSignature",
+        "encoding": "base64"
+      },
+      "id": "line-sign-hmac",
+      "name": "計算 LINE 簽章",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        0,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "line-signature-equals",
+              "leftValue": "={{ $json.expectedSignature }}",
+              "rightValue": "={{ $('LINE Webhook').first().json.headers['x-line-signature'] }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "line-sign-if",
+      "name": "驗證 LINE 簽章",
+      "type": "n8n-nodes-base.if",
+  "typeVersion": 2.3,
+      "position": [
+        260,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "LINE Webhook": {
+      "main": [
+        [
+          {
+            "node": "計算 LINE 簽章",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "計算 LINE 簽章": {
+      "main": [
+        [
+          {
+            "node": "驗證 LINE 簽章",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "驗證 LINE 簽章": {
+      "main": [
+        [
+          {
+            "node": "解析與評分（教學規則）",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "解析與評分（教學規則）": {
+      "main": [
+        [
+          {
+            "node": "回覆 LINE（設定 Token）",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "line-lead-analysis-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

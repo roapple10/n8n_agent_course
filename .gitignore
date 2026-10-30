@@ -6,3 +6,6 @@
 credentials*.json
 execution-data/
 node_modules/
+LINE官方帳號申請資料備份.txt
+key.txt
+*key*.txt

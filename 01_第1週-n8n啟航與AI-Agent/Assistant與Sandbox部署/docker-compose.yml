@@ -8,6 +8,10 @@ services:
     environment:
       - TZ=Asia/Taipei
       - GENERIC_TIMEZONE=Asia/Taipei
+      # Quick Tunnel 的臨時 HTTPS 網址存於同資料夾的 .env（已排除版本控制）。
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - N8N_PROXY_HOPS=${N8N_PROXY_HOPS:-1}
+      - N8N_SECURE_COOKIE=false
       # 請改為自己產生的長隨機字串；不可提交真實值到 Git。
       - N8N_ENCRYPTION_KEY=CHANGE_THIS_TO_A_LONG_RANDOM_SECRET
       - N8N_DIAGNOSTICS_ENABLED=false
