@@ -1,0 +1,21 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      # 只在本機開放；Cloudflare Quick Tunnel 可連到 localhost:5678。
+      - "127.0.0.1:5678:5678"
+    environment:
+      - TZ=Asia/Taipei
+      - GENERIC_TIMEZONE=Asia/Taipei
+      # 沒有 .env 時使用本機網址；測 LINE／Telegram 時可在 .env 改成 Tunnel 網址。
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      - N8N_PROXY_HOPS=${N8N_PROXY_HOPS:-1}
+      - N8N_SECURE_COOKIE=false
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_PERSONALIZATION_ENABLED=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  n8n_data:
