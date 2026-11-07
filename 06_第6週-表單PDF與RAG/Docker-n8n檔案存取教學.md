@@ -38,33 +38,73 @@
 ### 2. 為什麼放到 `/tmp` 不行？
 雖然 Linux 的 `/tmp` 常被用作暫存資料夾，但在 n8n 的安全策略中，`/tmp` 預設是不允許被工作流程直接讀寫的。
 
+### 3. 為什麼直接複製到 `.n8n-files` 會出現 `Could not find the file`？
+全新啟動的 n8n 容器內預設**尚未建立** `/home/node/.n8n-files` 資料夾。如果直接執行 `docker cp` 指向不存在的目錄，Docker 會出現：
+```text
+Error response from daemon: Could not find the file /home/node/.n8n-files in container ...
+```
+因此必須**先建立資料夾，再執行複製**。
+
 ---
 
-## 三、【最推薦】免重啟解決步驟
+## 三、【最推薦】免重啟解決步驟（標準兩行指令）
 
-**不需要重啟 Docker 容器！** 只要將檔案放到 n8n 的預設合法目錄 `/home/node/.n8n-files`，並修改節點路徑即可。
+> [!IMPORTANT]
+> **⚠️ 核心前提：確認你的容器名稱 (Container Name)**
+> 本教材範例容器名稱為 `n8n-course`。**每位同學的容器名稱可能不一樣**（例如可能叫 `n8n`、`06_6-pdfrag-n8n-1` 等）。
+> 
+> 請透過以下任一種方式確認你的真實容器名稱：
+> 
+> #### 🖥️ 方式 A：在 Docker Desktop 圖形介面查看（最直覺推薦）
+> 1. 打開 Windows 桌面上的 **Docker Desktop** 應用程式。
+> 2. 點擊左側選單的 **「Containers」**（方塊圖示）。
+> 3. 在中間清單中尋找正在運行的容器（狀態為綠色圖示 `Running`）：
+>    * 💡 **注意**：若是透過 docker-compose 啟動，容器會被收納在專案資料夾內（例如顯示為 `06_6-pdfrag`），**請點擊左側箭頭 展開**。
+>    * 展開後，查看第一欄 **「Name」** 顯示的文字（例如 `n8n-course` 或 `n8n`）。
+>    * 可以將滑鼠移上去點擊右側的 **複製圖示**，即可複製完整的容器名稱！
+> 
+> #### 💻 方式 B：在 PowerShell 終端機查看
+> 在終端機輸入：
+> ```powershell
+> docker ps
+> ```
+> 觀察輸出結果最右側的 **`NAMES`** 欄位。
+> 
+> ⚠️ **請將後續所有指令中的 `<你的容器名稱>`（或 `n8n-course`）替換為你實際查到的名稱！**
 
-### 步驟 1：將檔案複製到 n8n 允許的白名單目錄
-在 Windows PowerShell 執行：
+---
+
+### 標準解決流程：先建資料夾，再複製檔案
+
+#### 步驟 1：先在容器內建立白名單資料夾
 ```powershell
-docker cp "course.txt" n8n-course:/home/node/.n8n-files/course.txt
+docker exec -u node <你的容器名稱> mkdir -p /home/node/.n8n-files
 ```
+*(範例：`docker exec -u node n8n-course mkdir -p /home/node/.n8n-files`)*
 
-### 步驟 2：確保容器內檔案擁有者正確（選擇性但推薦）
-透過 `docker cp` 複製進去的檔案預設擁有者可能是 `root`。為了避免執行身分權限問題，可執行一行指令將權限修正為 n8n 運行的使用者 `node`：
+#### 步驟 2：再將本機檔案複製進白名單目錄
+請在目前存放檔案的目錄下（例如 `06_第6週-表單PDF與RAG`）執行：
 ```powershell
-docker exec -u 0 n8n-course chown -R node:node /home/node/.n8n-files
+docker cp .\course.txt <你的容器名稱>:/home/node/.n8n-files/course.txt
 ```
+*(範例：`docker cp .\course.txt n8n-course:/home/node/.n8n-files/course.txt`)*
 
-### 步驟 3：修改 n8n 節點設定
+#### 步驟 3：確保容器內檔案擁有者正確（推薦補充）
+避免複製進去的檔案權限受限，執行以下指令修正為 `node` 使用者權限：
+```powershell
+docker exec -u 0 <你的容器名稱> chown -R node:node /home/node/.n8n-files
+```
+*(範例：`docker exec -u 0 n8n-course chown -R node:node /home/node/.n8n-files`)*
+
+#### 步驟 4：修改 n8n 節點設定並測試
 1. 開啟 n8n 畫布，點開 **`Read/Write Files from Disk`** 節點。
-2. 將 **File Selector**（或 **File Path**）修改為：
+2. 將 **File Selector**（或 **File Path**）修改為白名單絕對路徑：
    ```text
    /home/node/.n8n-files/course.txt
    ```
 3. 點擊 **「Test step」**。
 
-👉 **立即執行成功！完全不影響正在運行的 n8n，無須重新啟動容器。**
+👉 **立即執行成功！完全不需要重啟 Docker 容器。**
 
 ---
 
@@ -81,7 +121,7 @@ docker exec -u 0 n8n-course chown -R node:node /home/node/.n8n-files
 services:
   n8n:
     image: n8nio/n8n:latest
-    container_name: n8n-course
+    container_name: n8n-course   # 👈 這裡可自訂固定容器名稱
     restart: unless-stopped
     ports:
       - "127.0.0.1:5678:5678"
@@ -91,7 +131,7 @@ services:
       # ... 其他既有環境變數 ...
     volumes:
       - n8n_data:/home/node/.n8n
-      # 👇 新增這一行：將專案的 files 目錄掛載到容器的允許路徑
+      # 👇 新增這一行：將本機專案的 files 目錄掛載到容器的允許路徑
       - ./files:/home/node/.n8n-files
 
 volumes:
@@ -112,7 +152,7 @@ docker compose up -d
 之後只要在 Windows 本機把 `course.txt` 丟進專案下的 `files/` 資料夾：
 * 檔案會**自動同步**進容器的 `/home/node/.n8n-files/`。
 * n8n 節點直接讀取 `/home/node/.n8n-files/course.txt`。
-* 再也不需要手動下 `docker cp`，重開機也不會遺失檔案！
+* 再也不需要手動下 `docker cp`，重開機或重新建立容器也不會遺失檔案！
 
 ---
 
@@ -146,8 +186,9 @@ docker compose up -d
 
 | 檢查項目 | 常見錯誤寫法 | 正確寫法 | 說明 |
 | :--- | :--- | :--- | :--- |
+| **容器名稱不符** | 盲目照抄 `n8n-course` | 開啟 Docker Desktop 查看「Name」欄位，或執行 `docker ps` | 每個同學的 container 名稱可能依 `docker-compose` 設定而異。 |
+| **容器內尚未建目錄** | 直接 `docker cp` 報錯 `Could not find the file` | 先執行 `docker exec -u node <容器名> mkdir -p /home/node/.n8n-files` | 容器內需先有目錄才能複製檔案。 |
 | **節點路徑格式** | `C:\Users\User\...\course.txt` | `/home/node/.n8n-files/course.txt` | n8n 跑在 Linux 容器內，不能直接填寫 Windows 本機路徑。 |
-| **預設允許路徑** | `/tmp/course.txt` | `/home/node/.n8n-files/course.txt` | 預設只有 `/home/node/.n8n-files` 在白名單內。 |
-| **容器內檔案檢查** | 猜測檔案有沒有進去 | `docker exec n8n-course ls -la /home/node/.n8n-files` | 用此指令確認檔案是否存在於容器內。 |
-| **檔案權限** | `root` 獨佔無讀取權限 | `docker exec -u 0 n8n-course chown -R node:node /home/node/.n8n-files` | 確保執行 n8n 的 `node` 帳號有讀取權限。 |
-
+| **預設允許路徑** | `/tmp/course.txt` | `/home/node/.n8n-files/course.txt` | 預設只有 `/home/node/.n8n-files` 在安全白名單內。 |
+| **容器內檔案檢查** | 猜測檔案有沒有進去 | `docker exec <容器名> ls -la /home/node/.n8n-files` | 用此指令確認檔案是否存在於容器內。 |
+| **檔案權限** | `root` 獨佔無讀取權限 | `docker exec -u 0 <容器名> chown -R node:node /home/node/.n8n-files` | 確保執行 n8n 的 `node` 帳號有讀取權限。 |

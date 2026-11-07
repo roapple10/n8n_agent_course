@@ -1,6 +1,7 @@
 services:
   n8n:
     image: n8nio/n8n:latest
+    container_name: n8n-course
     restart: unless-stopped
     ports:
       # 只在本機開放；Cloudflare Quick Tunnel 可連到 localhost:5678。
@@ -19,3 +20,4 @@ services:
 
 volumes:
   n8n_data:
+  
