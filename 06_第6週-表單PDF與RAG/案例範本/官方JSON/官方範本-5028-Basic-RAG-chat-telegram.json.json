@@ -1,0 +1,547 @@
+{
+  "name": "官方範本-5028-Basic-RAG-chat-telegram.json",
+  "nodes": [
+    {
+      "parameters": {
+        "chunkOverlap": 50,
+        "options": {
+          "splitCode": "markdown"
+        }
+      },
+      "id": "3ca80e43-c1b0-46f7-9ecc-23b874c2326c",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "position": [
+        96,
+        160
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### Load data into database\nFetch file from Google Drive, split it into chunks and insert into Pinecone index",
+        "height": 806.6556079800943,
+        "width": 978.0454109366399,
+        "color": 7
+      },
+      "id": "eae593fa-d41f-4fa0-862a-0c94a04251df",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -576,
+        -304
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### Chat with database\nEmbed the incoming chat message and use it retrieve relevant chunks from the vector store. These are passed to the model to formulate an answer ",
+        "height": 849.4411596574598,
+        "width": 795.4336844920119,
+        "color": 7
+      },
+      "id": "c091c4fa-afa8-47c2-9726-596093d24a43",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        688,
+        -320
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {}
+      },
+      "id": "8286658e-f24d-43d0-aba0-b8b79dcf5909",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "position": [
+        96,
+        48
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "796fa1b5-6f3d-48f0-88a7-088d8537c1dc",
+      "name": "Question and Answer Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "position": [
+        736,
+        -176
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {},
+      "id": "cfd44bef-e73a-4429-ba68-8095f2112cd5",
+      "name": "Vector Store Retriever",
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "position": [
+        928,
+        48
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "id": "418bd9e0-595d-4c40-a4f4-7f0f8073c245",
+      "name": "When clicking 'Test Workflow' button",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        -768,
+        -176
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "70126d1b-4c74-432d-9599-852445c5288d",
+      "name": "When clicking 'Chat' button below",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "position": [
+        544,
+        -176
+      ],
+      "webhookId": "066b342b-f2b6-401e-b560-12f5d23b6103",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "fileSelector": "/home/node/.n8n-files/course.txt",
+        "options": {}
+      },
+      "id": "3d3299bc-78ce-4e7e-bcf0-14959a7696b8",
+      "name": "Read/Write Files from Disk",
+      "type": "n8n-nodes-base.readWriteFile",
+      "position": [
+        -544,
+        -176
+      ],
+      "typeVersion": 1,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {},
+      "id": "721a8ea7-fd22-432b-8bbb-54845b1518bd",
+      "name": "In-Memory Vector Store1",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "position": [
+        928,
+        224
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "clearStore": true
+      },
+      "id": "5e45ae85-1d63-4867-a471-3f72cc9acd3e",
+      "name": "In-Memory Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "position": [
+        -320,
+        -176
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v3.0"
+      },
+      "id": "6474f5e2-bf1c-41fd-bea6-59195a6cfadb",
+      "name": "Embeddings Cohere",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "position": [
+        -288,
+        144
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "cohereApi": {
+          "id": "J9hsVKgM9VQYPVrq",
+          "name": "Cohere account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "id": "e0634345-e67c-41f6-bf4f-99bb673a4559",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "position": [
+        784,
+        64
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "groqApi": {
+          "id": "QscnSJ6EBovtsjWO",
+          "name": "Groq account"
+        }
+      },
+      "notes": "使用繁體中文"
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v3.0"
+      },
+      "id": "b8d102a2-b17e-476b-a027-84d5117a4f7c",
+      "name": "Embeddings Cohere1",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "position": [
+        1024,
+        400
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "cohereApi": {
+          "id": "J9hsVKgM9VQYPVrq",
+          "name": "Cohere account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "query": "={{ $json.message.text }}",
+        "options": {}
+      },
+      "id": "16ba3004-22d6-4d2d-aa84-e8b3d3d5e522",
+      "name": "Question and Answer Chain1",
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "position": [
+        2032,
+        -144
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {},
+      "id": "9e836707-9563-4a6c-9fdd-64482e7195dd",
+      "name": "Vector Store Retriever1",
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "position": [
+        2224,
+        80
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "id": "b755a656-8a4f-44c2-853a-6273b39a080f",
+      "name": "In-Memory Vector Store2",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "position": [
+        2224,
+        256
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "id": "be441c64-9912-490a-81b5-0f8976686515",
+      "name": "Groq Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "position": [
+        2080,
+        96
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "groqApi": {
+          "id": "QscnSJ6EBovtsjWO",
+          "name": "Groq account"
+        }
+      },
+      "notes": "使用繁體中文"
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v3.0"
+      },
+      "id": "5cb5b9fe-5511-4ebf-bcec-630333ad6474",
+      "name": "Embeddings Cohere2",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "position": [
+        2320,
+        432
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "cohereApi": {
+          "id": "J9hsVKgM9VQYPVrq",
+          "name": "Cohere account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        1808,
+        -144
+      ],
+      "id": "48c6dcdc-848b-4ba9-ae11-59b068fa6a1b",
+      "name": "Telegram Trigger",
+      "webhookId": "c9dc678a-a9d5-40d5-9cf8-fb5942ab4f5a",
+      "credentials": {
+        "telegramApi": {
+          "id": "F5NPFE39rX4gmqpi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.response.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2496,
+        -144
+      ],
+      "id": "67ffa5fe-2c43-4da3-a358-c3d8e74c4dc0",
+      "name": "Send a text message",
+      "webhookId": "80eeb668-e64d-4560-96b8-5de8dd8da373",
+      "notesInFlow": false,
+      "credentials": {
+        "telegramApi": {
+          "id": "F5NPFE39rX4gmqpi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### Chat with database by Telegram\nEmbed the incoming chat message and use it retrieve relevant chunks from the vector store. These are passed to the model to formulate an answer ",
+        "height": 849.4411596574598,
+        "width": 795.4336844920119,
+        "color": 7
+      },
+      "id": "3a66c1d8-6eaf-463f-af77-6b924c42ac55",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1760,
+        -336
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere": {
+      "ai_embedding": [
+        [
+          {
+            "node": "In-Memory Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "In-Memory Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "In-Memory Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "In-Memory Vector Store1": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "In-Memory Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking 'Chat' button below": {
+      "main": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking 'Test Workflow' button": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Retriever1": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Question and Answer Chain1",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "In-Memory Vector Store2": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Retriever1",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Question and Answer Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "In-Memory Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Question and Answer Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Question and Answer Chain1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5b0118e4-f5f3-4d20-94c8-55715ff17430",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "266c7abd00a9156a6bbdd333caa23eff12d01b585f356b08462f3b73083c2f9d"
+  },
+  "nodeGroups": [],
+  "id": "Jga2M52F9dNi1oJL",
+  "tags": []
+}
