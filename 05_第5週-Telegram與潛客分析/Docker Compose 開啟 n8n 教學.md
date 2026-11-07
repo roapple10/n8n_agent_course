@@ -49,7 +49,7 @@ docker compose up -d
 docker compose ps
 ```
 
-看到 `n8n-course` 狀態為 `Up` 後，在瀏覽器開啟 [`http://localhost:5678`](http://localhost:5678)。第一次使用時，依畫面建立自己的 n8n 帳號與密碼。
+看到 `n8n` 服務狀態為 `Up` 後，在瀏覽器開啟 [`http://localhost:5678`](http://localhost:5678)。第一次使用時，依畫面建立自己的 n8n 帳號與密碼。
 
 ### 金鑰和資料如何保存？
 
